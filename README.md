@@ -9,12 +9,18 @@ npm install
 npm run dev
 ```
 
-浏览器打开 `http://localhost:3000`。生产构建使用 `npm run build`。
+浏览器打开终端显示的本地地址。生产构建使用 `npm run build`。
+
+## 在线体验
+
+[https://cecilia-huu.github.io/in-trip-decision/](https://cecilia-huu.github.io/in-trip-decision/)
+
+推送到 `main` 分支后，GitHub Actions 会自动构建并发布 GitHub Pages。
 
 ## 核心结构
 
 - `app/page.tsx`：四屏流程与全部交互状态
 - `app/mock-data.ts`：场景、问题、推荐和反馈文案
 - `app/globals.css`：移动端优先视觉系统与轻量动效
-- `app/layout.tsx`：页面与分享卡片元信息
+- `index.html`：页面与分享卡片元信息
 - `public/og-intrip.png`：产品分享封面
