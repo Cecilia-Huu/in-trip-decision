@@ -14,12 +14,13 @@ export type Move = {
 };
 
 export type Scenario = {
-  id: "seville" | "barcelona" | "tokyo";
+  id: string;
   demo: string;
   city: string;
   time: string;
   weather: string;
   mode: string;
+  occasion?: string;
   trigger: string;
   changeType: "world" | "me";
   teaser: string;
@@ -98,7 +99,7 @@ const tokyoMoves: Move[][] = [
 
 export const scenarios: Scenario[] = [
   {
-    id: "seville", demo: "DEMO 01", city: "Seville", time: "13:40", weather: "Sunny", mode: "Solo", trigger: "景点关门", changeType: "world", teaser: "Christmas Day · 景点关闭",
+    id: "seville", demo: "DEMO 01", city: "Seville", time: "13:40", weather: "Sunny", mode: "Solo", occasion: "Christmas Day", trigger: "景点关门", changeType: "world", teaser: "Christmas Day · 景点关闭",
     prompt: "很多地方圣诞节不开，但今天天气很好，我还不想回去，想慢慢感受一下这座城市。",
     summary: ["很多地方今天没有开放", "天气很好，你还不想结束今天", "你更想慢慢感受这座城市"],
     tags: ["Solo", "Sunny", "Plan changed", "Want to slow down"], answers: { time: "2 小时以上", pace: "慢一点", energy: "只想轻松一点" }, stateTags: ["2h+", "想慢一点", "低体力"], learning: "下次你说“今天想慢一点”时，我会更偏向这种轻一点的节奏。", moveSets: sevilleMoves,
@@ -118,3 +119,39 @@ export const scenarios: Scenario[] = [
 ];
 
 export const feedbackReasons = ["还是太累了", "想更特别一点", "不想坐下来", "太游客了", "想安静一点", "还是想继续看点东西"];
+
+const genericMoveSets: Move[][] = [
+  [
+    { id: "custom-pause", category: "Pause & reset", title: "找一个附近能坐下来的地方，先让自己停一会儿", distance: "Within 8 min", effort: "Low", availability: "Open now", whyNow: "计划变化之后，不必马上补上另一个安排。先把节奏放慢，下一步会更容易判断。", serendipity: 1, cta: "先去坐下", visual: "pause" },
+    { id: "custom-wander", category: "Open-ended wander", title: "往一个舒服的方向走一小段，不设明确终点", distance: "Starts here", effort: "Low–medium", availability: "Always available", whyNow: "它保留了继续旅行的感觉，也允许你随时停下、折返或改变主意。", serendipity: 2, cta: "开始走走", visual: "wander" },
+    { id: "custom-spark", category: "Small discovery", title: "看看附近有没有无需预约、可以随时加入的小体验", distance: "Within 12 min", effort: "Low", availability: "A few options", whyNow: "一个低承诺的小发现，不需要重新规划整天，也能让意外变成今天的一部分。", serendipity: 3, cta: "看看有什么", visual: "spark" },
+  ],
+  [
+    { id: "custom-food", category: "Refuel", title: "找点容易吃到的东西，再决定要不要继续", distance: "Within 10 min", effort: "Low", availability: "Open now", whyNow: "先照顾身体通常比急着寻找替代景点更重要。吃点东西后，你可以重新判断自己的状态。", serendipity: 1, cta: "找点吃的", visual: "food" },
+    { id: "custom-view", category: "Easy city time", title: "找一处开阔但不远的位置，看看城市此刻的样子", distance: "10–15 min", effort: "Low–medium", availability: "Open-air", whyNow: "它有一个轻方向，但没有必须完成的任务，适合计划刚刚被打断的时候。", serendipity: 2, cta: "去看看", visual: "view" },
+    { id: "custom-play", category: "Playful detour", title: "给接下来半小时安排一个低承诺的小插曲", distance: "Nearby", effort: "Medium", availability: "Walk-in", whyNow: "明确的短时长让你不会被新计划绑住，同时又能给这段意外留下一个积极记忆。", serendipity: 3, cta: "来点意外", visual: "play" },
+  ],
+];
+
+export function createCustomScenario(city: string): Scenario {
+  const now = new Date();
+  const time = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+  return {
+    id: `custom-${city}`,
+    demo: "LIVE",
+    city,
+    time,
+    weather: "",
+    mode: "Solo",
+    trigger: "",
+    changeType: "world",
+    teaser: "当前旅程",
+    prompt: "",
+    summary: ["计划或状态刚刚发生了变化"],
+    tags: [],
+    answers: { time: "1 小时左右", pace: "慢一点" },
+    stateTags: [],
+    learning: "下次遇到类似变化时，我会更快找到适合你当下节奏的选择。",
+    moveSets: genericMoveSets,
+  };
+}
