@@ -23,4 +23,4 @@ npm run dev
 - `app/mock-data.ts`：场景、问题、推荐和反馈文案
 - `app/globals.css`：移动端优先视觉系统与轻量动效
 - `index.html`：页面与分享卡片元信息
-- `public/og-intrip.png`：产品分享封面
+- `public/og-general.png`：通用产品分享封面
