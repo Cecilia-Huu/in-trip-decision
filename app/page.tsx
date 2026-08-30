@@ -32,18 +32,24 @@ const uiCopy = {
     triggerAction: "调整这一段",
     gapClosed: "王宫临时关闭",
     gapDinner: "18:30 晚餐已预订",
-    contextEyebrow: "现在",
-    contextTitle: "想怎么调整？",
-    contextCopy: "说一句现在的情况，也可以直接继续。",
-    noteLabel: "可以说一句现在的情况",
-    notePlaceholder: "有点累，不想再走太远。",
-    constraintsLabel: "当前状态",
+    contextEyebrow: "CONTEXT CHECK",
+    contextTitle: "调整这一段",
+    contextCopy: "我知道这一段：",
+    knownFacts: ["塞维利亚王宫 · 临时关闭", "Tapas 晚餐 · 18:30 已预订", "现在 16:05 · 还剩 2 小时 15 分"],
+    profileLabel: "已有旅行偏好",
+    profileValue: "Solo · 偏慢节奏",
+    nowLabel: "现在呢？",
+    optional: "可以不选。",
+    noteLabel: "还想补充什么？",
+    notePlaceholder: "比如：不想再去一个大景点。",
+    constraintsLabel: "现在的状态（可选）",
     constraints: [
-      { value: "less" as const, label: "少走一点" },
+      { value: "tired" as const, label: "有点累" },
+      { value: "less" as const, label: "不想走太远" },
       { value: "explore" as const, label: "还想继续逛" },
-      { value: "decide" as const, label: "随便帮我安排" },
+      { value: "decide" as const, label: "直接帮我安排" },
     ],
-    fallback: "不说也可以，我会先按少绕路、不赶场来安排。",
+    fallback: "不选也可以，默认按少绕路、无需预约、不破坏后续安排来排。",
     submit: "看看接下来怎么走",
     skip: "不补充，直接继续",
     processingTitle: "正在保留 18:30 晚餐…",
@@ -52,6 +58,7 @@ const uiCopy = {
     resultTitle: "接下来这样走",
     anchorLocked: "18:30 晚餐保留",
     why: "为什么这样改？",
+    evidenceLabel: "这次优先考虑",
     moreActive: "还想多逛一点",
     lessWalking: "少走一点",
     keepThis: "就这样",
@@ -106,14 +113,8 @@ const uiCopy = {
     storyTitleTop: "计划变了，",
     storyTitleBottom: "就从下一步开始。",
     storyLead: "不用把整趟旅行想明白，先决定下一步。",
-    storyDetail: "轻一点，松一点，走着看也没关系。",
-    principlesLabel: "旅途中三个片刻",
-    principles: [
-      ["计划有变", "只调整眼前这一段。"],
-      ["顺路就好", "不为最近的地方绕远。"],
-      ["看到什么", "当下就能听懂。"],
-      ["继续旅行", "少看屏幕，多看身边。"],
-    ],
+    storyDetail: "只调整中间这一段。",
+    storyScene: ["16:00 王宫临时关闭", "还有 2 小时 15 分", "18:30 晚餐已预订"],
     prototypeNote: "使用模拟的塞维利亚行程与本地交互状态，用于展示产品交互逻辑。",
     prototypeDisclosure: "概念原型 · 模拟行程数据",
     prototypeAria: "In-trip Decision 交互原型",
@@ -143,18 +144,24 @@ const uiCopy = {
     triggerAction: "Adjust this gap",
     gapClosed: "Royal Alcázar closed",
     gapDinner: "18:30 dinner reserved",
-    contextEyebrow: "Right now",
-    contextTitle: "What changed?",
-    contextCopy: "Tell me in one sentence—or continue without it.",
-    noteLabel: "Tell me what matters right now",
-    notePlaceholder: "My feet hurt, but I still want to explore.",
-    constraintsLabel: "Quick constraints",
+    contextEyebrow: "CONTEXT CHECK",
+    contextTitle: "Adjust this gap",
+    contextCopy: "Here’s what I already know:",
+    knownFacts: ["Royal Alcázar · closed", "Tapas Dinner · reserved at 18:30", "Now 16:05 · 2 hr 15 min left"],
+    profileLabel: "Saved trip preference",
+    profileValue: "Solo · slow pace",
+    nowLabel: "How are you now?",
+    optional: "Optional.",
+    noteLabel: "Anything else?",
+    notePlaceholder: "For example: I don’t want another big sight.",
+    constraintsLabel: "How you feel now (optional)",
     constraints: [
-      { value: "less" as const, label: "Less walking" },
+      { value: "tired" as const, label: "A little tired" },
+      { value: "less" as const, label: "Not too far" },
       { value: "explore" as const, label: "Still want to explore" },
       { value: "decide" as const, label: "Decide for me" },
     ],
-    fallback: "No answer needed. I’ll keep it easy and avoid rushing.",
+    fallback: "No answer needed. I’ll avoid detours and bookings, and keep dinner safe.",
     submit: "Adjust what’s next",
     skip: "Continue without input",
     processingTitle: "Keeping your 18:30 dinner…",
@@ -163,6 +170,7 @@ const uiCopy = {
     resultTitle: "I adjusted what’s next.",
     anchorLocked: "18:30 dinner kept",
     why: "Why this change?",
+    evidenceLabel: "Prioritised this time",
     moreActive: "More active",
     lessWalking: "Less walking",
     keepThis: "Keep this",
@@ -217,14 +225,8 @@ const uiCopy = {
     storyTitleTop: "Plans changed?",
     storyTitleBottom: "Start with what’s next.",
     storyLead: "You don’t need to figure out the whole trip. Just decide the next step.",
-    storyDetail: "Keep it light. Keep moving. See what happens.",
-    principlesLabel: "Three in-trip moments",
-    principles: [
-      ["Plans change", "Repair only this part."],
-      ["On the way", "Choose the route, not the nearest."],
-      ["What’s that?", "Understand what’s in front of you."],
-      ["Keep travelling", "Less screen, more place."],
-    ],
+    storyDetail: "Only repair the space in between.",
+    storyScene: ["16:00 Royal Alcázar closed", "2 hr 15 min open", "18:30 dinner reserved"],
     prototypeNote: "Mocked Seville context with client-side state orchestration to demonstrate the interaction model.",
     prototypeDisclosure: "Concept prototype · mocked context",
     prototypeAria: "In-trip Decision interactive prototype",
@@ -311,11 +313,12 @@ function ContextInput({ t, note, constraint, processing, onNoteChange, onConstra
   t: UiCopy; note: string; constraint: Constraint | null; processing: boolean; onNoteChange: (value: string) => void; onConstraint: (value: Constraint) => void; onSubmit: () => void; onSkip: () => void;
 }) {
   return <section className="app-screen context-screen" aria-labelledby="context-title">
-    <div className="gap-summary"><span>16:05</span><div><b>{t.gapClosed}</b><i>→</i><b>{t.gapDinner}</b></div></div>
     <div className="context-sheet">
-      <p className="eyebrow">{t.contextEyebrow}</p><h2 id="context-title">{t.contextTitle}</h2><p className="sheet-copy">{t.contextCopy}</p>
-      <label className="context-field"><span className="sr-only">{t.noteLabel}</span><textarea value={note} onChange={(event) => onNoteChange(event.target.value)} placeholder={t.notePlaceholder} /></label>
+      <p className="eyebrow">{t.contextEyebrow}</p><h2 id="context-title">{t.contextTitle}</h2>
+      <section className="known-context" aria-label={t.contextCopy}><strong>{t.contextCopy}</strong><ul>{t.knownFacts.map((fact) => <li key={fact}><Icon name={fact.includes("18:30") ? "lock" : "check"} />{fact}</li>)}</ul><p><span>{t.profileLabel}</span>{t.profileValue}</p></section>
+      <div className="now-heading"><strong>{t.nowLabel}</strong><span>{t.optional}</span></div>
       <div className="constraint-chips" aria-label={t.constraintsLabel}>{t.constraints.map((chip) => <button type="button" key={chip.value} className={constraint === chip.value ? "selected" : ""} aria-pressed={constraint === chip.value} onClick={() => onConstraint(chip.value)}>{chip.label}</button>)}</div>
+      <label className="context-field"><span>{t.noteLabel}</span><textarea value={note} onChange={(event) => onNoteChange(event.target.value)} placeholder={t.notePlaceholder} /></label>
       <p className="fallback-note"><Icon name="spark" /> {t.fallback}</p>
       {processing ? <div className="processing-state" role="status"><span /><div><strong>{t.processingTitle}</strong><p>{t.processingCopy}</p></div></div> : <div className="context-actions"><button className="primary-action" type="button" onClick={onSubmit}>{t.submit} <Icon name="arrow" /></button><button className="quiet-action" type="button" onClick={onSkip}>{t.skip}</button></div>}
     </div>
@@ -330,16 +333,31 @@ function PlanItem({ block }: { block: PlanBlock }) {
   </li>;
 }
 
-function RecoveryPlanView({ locale, t, variant, flowing, accepted, onLessWalking, onMoreActive, onAccept, onReplay, onOpenNearby }: {
-  locale: Locale; t: UiCopy; variant: PlanVariant; flowing: boolean; accepted: boolean; onLessWalking: () => void; onMoreActive: () => void; onAccept: () => void; onReplay: () => void; onOpenNearby: () => void;
+function RecoveryPlanView({ locale, t, variant, constraint, note, flowing, accepted, onLessWalking, onMoreActive, onAccept, onReplay, onOpenNearby }: {
+  locale: Locale; t: UiCopy; variant: PlanVariant; constraint: Constraint | null; note: string; flowing: boolean; accepted: boolean; onLessWalking: () => void; onMoreActive: () => void; onAccept: () => void; onReplay: () => void; onOpenNearby: () => void;
 }) {
   const plan = tripData[locale].plans[variant];
+  const trimmedNote = note.trim();
+  const stateReason = variant === "less" && constraint === "tired"
+    ? locale === "zh"
+      ? "你现在有点累，所以这次没有再补一个大型景点，而是把步行缩短到 380 米，多留 30 分钟休息。18:30 的晚餐不变。"
+      : "You feel a little tired, so this avoids another major sight, cuts the walk to 380 metres, and adds 30 minutes of rest. Dinner stays at 18:30."
+    : variant === "less" && constraint === "less"
+      ? locale === "zh"
+        ? "你不想走太远，所以这次优先选了近距离、可以坐下的安排。步行缩短到 380 米，18:30 的晚餐不变。"
+        : "You do not want to go far, so this keeps the stop close and mostly seated. Walking drops to 380 metres and dinner stays at 18:30."
+      : plan.reason;
+  const contextualReason = trimmedNote
+    ? locale === "zh"
+      ? `你补充了“${trimmedNote.slice(0, 24)}${trimmedNote.length > 24 ? "…" : ""}”。${stateReason}`
+      : `You added “${trimmedNote.slice(0, 42)}${trimmedNote.length > 42 ? "…" : ""}”. ${stateReason}`
+    : stateReason;
   return <section className={`app-screen plan-screen variant-${variant} ${flowing ? "flowing" : ""}`} aria-labelledby="plan-title">
     <div className="plan-heading"><div><p className="eyebrow">{t.resultEyebrow}</p><h2 id="plan-title">{t.resultTitle}</h2></div><span className="anchor-lock"><Icon name="lock" /> {t.anchorLocked}</span></div>
     <p className="plan-summary">{plan.summary}</p>
     <div className="plan-context-row"><div className="plan-metric"><Icon name="walk" /><span>{plan.walking}</span><i>·</i><span>{plan.buffer}</span></div><button className="spatial-link" type="button" onClick={onOpenNearby}>{t.viewOnMap} <Icon name="arrow" /></button></div>
     <ol className="recovery-timeline" aria-live="polite">{plan.blocks.map((block) => <PlanItem key={`${variant}-${block.id}`} block={block} />)}</ol>
-    <div className="why-card"><span><Icon name="spark" /></span><p><strong>{t.why}</strong>{plan.reason}</p></div>
+    <div className="why-card"><span><Icon name="spark" /></span><div><p><strong>{t.why}</strong>{contextualReason}</p><div className="decision-evidence"><b>{t.evidenceLabel}</b>{plan.evidence.map((item) => <i key={item}>{item}</i>)}</div></div></div>
     <div className="steer-actions"><button type="button" onClick={onMoreActive}>{t.moreActive}</button><button type="button" className={variant === "less" ? "selected" : ""} onClick={onLessWalking}>{t.lessWalking}</button><button type="button" className="accept-action" onClick={onAccept}>{t.keepThis}</button></div>
     {accepted ? <div className="accepted-toast" role="status"><Icon name="check" /><span>{t.accepted}</span><button type="button" onClick={onReplay}>{t.replay}</button></div> : null}
   </section>;
@@ -377,11 +395,38 @@ function LandmarkPreview({ landmarkId, compact = false }: { landmarkId: Landmark
 
 function LensResult({ locale, landmarkId, t, narrative, onNarrative }: { locale: Locale; landmarkId: LandmarkId; t: UiCopy; narrative: LandmarkNarrative; onNarrative: (narrative: LandmarkNarrative) => void }) {
   const landmark = landmarks[landmarkId].content[locale];
+  const guide = landmark.narratives[narrative];
+  const [speaking, setSpeaking] = useState(false);
+
+  useEffect(() => () => window.speechSynthesis?.cancel(), []);
+
+  const toggleSpeech = () => {
+    if (!("speechSynthesis" in window)) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance([guide.title, ...guide.paragraphs].join("。"));
+    utterance.lang = locale === "zh" ? "zh-CN" : "en-US";
+    utterance.rate = 0.94;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  };
+
+  const switchNarrative = (next: LandmarkNarrative) => {
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+    onNarrative(next);
+  };
+
   return <section className="app-screen lens-result" aria-labelledby="lens-result-title">
     <div className="lens-result-heading"><LandmarkPreview landmarkId={landmarkId} compact /><div><p className="eyebrow">{t.lookingAt}</p><h2 id="lens-result-title">{landmark.name}</h2>{landmark.location ? <p className="landmark-location">{landmark.location}</p> : null}</div></div>
-    <div className="lens-story primary-story"><p className="eyebrow">{t.oneThing}</p><p>{landmark.narratives[narrative]}</p></div>
-    <div className="look-up-card"><span>↗</span><p><strong>{t.lookUp}</strong>{landmark.lookUp}</p></div>
-    <div className="lens-modes" aria-label={t.oneThing}>{t.lensModes.map((mode) => <button type="button" key={mode.id} className={narrative === mode.id ? "active" : ""} aria-pressed={narrative === mode.id} onClick={() => onNarrative(mode.id)}>{mode.label}</button>)}</div>
+    <div className={`lens-story guide-${narrative}`} aria-live="polite"><p className="eyebrow">{narrative === "short" ? t.oneThing : guide.title}</p>{narrative === "short" ? <h3>{guide.title}</h3> : null}{guide.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{guide.sections?.map((section) => <section key={section.title}><strong>{section.title}</strong><p>{section.body}</p></section>)}{narrative === "short" && "speechSynthesis" in window ? <button className="speech-control" type="button" aria-pressed={speaking} onClick={toggleSpeech}>{speaking ? "■" : "▶"} {speaking ? (locale === "zh" ? "正在讲 · 点此停止" : "Playing · tap to stop") : "00:00 / 00:30"}</button> : null}</div>
+    {narrative !== "detail" ? <div className="look-up-card"><span>↗</span><p><strong>{t.lookUp}</strong>{landmark.lookUp}</p></div> : null}
+    <div className="lens-modes" aria-label={t.oneThing}>{t.lensModes.map((mode) => <button type="button" key={mode.id} className={narrative === mode.id ? "active" : ""} aria-pressed={narrative === mode.id} onClick={() => switchNarrative(mode.id)}>{mode.label}</button>)}</div>
   </section>;
 }
 
@@ -426,10 +471,8 @@ function ProductStory({ t }: { t: UiCopy }) {
     <p className="story-kicker">{t.storyKicker}</p>
     <h1>{t.storyTitleTop}<br /><em>{t.storyTitleBottom}</em></h1>
     <p className="story-lead">{t.storyLead}</p>
+    <ol className="story-scene">{t.storyScene.map((item, index) => <li key={item}><span>{item}</span>{index < t.storyScene.length - 1 ? <i>↓</i> : null}</li>)}</ol>
     <p className="story-cn">{t.storyDetail}</p>
-    <ul className="principles" aria-label={t.principlesLabel}>
-      {t.principles.map((principle, index) => <li key={principle[0]}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{principle[0]}</strong><p>{principle[1]}</p></div></li>)}
-    </ul>
     <p className="prototype-note">{t.prototypeNote}</p>
   </aside>;
 }
@@ -535,7 +578,7 @@ export default function Home() {
           <ProductHeader activeTab={activeTab} screen={screen} showBack={showBack} locale={locale} t={t} onBack={goBack} onLocaleChange={setLocale} />
           {activeTab === "trip" && screen === "live" ? <LiveItinerary locale={locale} t={t} onRepair={() => setScreen("context")} /> : null}
           {activeTab === "trip" && screen === "context" ? <ContextInput t={t} note={note} constraint={constraint} processing={processing} onNoteChange={setNote} onConstraint={(value) => setConstraint((current) => current === value ? null : value)} onSubmit={() => createPlan(true)} onSkip={() => createPlan(false)} /> : null}
-          {activeTab === "trip" && screen === "plan" ? <RecoveryPlanView locale={locale} t={t} variant={variant} flowing={flowing} accepted={accepted} onLessWalking={() => steer("less")} onMoreActive={() => steer("active")} onAccept={() => setAccepted(true)} onReplay={replay} onOpenNearby={() => setActiveTab("nearby")} /> : null}
+          {activeTab === "trip" && screen === "plan" ? <RecoveryPlanView locale={locale} t={t} variant={variant} constraint={constraint} note={note} flowing={flowing} accepted={accepted} onLessWalking={() => steer("less")} onMoreActive={() => steer("active")} onAccept={() => setAccepted(true)} onReplay={replay} onOpenNearby={() => setActiveTab("nearby")} /> : null}
           {activeTab === "nearby" ? <NearbyScreen t={t} selected={nearbyChoice} onSelect={setNearbyChoice} /> : null}
           {activeTab === "lens" ? <LensScreen locale={locale} t={t} state={lensState} selectedLandmark={selectedLandmark} narrative={lensNarrative} onCapture={startLensRecognition} onLookup={lookUpLandmark} onNarrative={setLensNarrative} onReset={resetLens} /> : null}
           <BottomNavigation activeTab={activeTab} t={t} onChange={setActiveTab} />
