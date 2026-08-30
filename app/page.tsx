@@ -1,92 +1,179 @@
-"use client";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { itinerary, plans, selectInitialPlan, type Constraint, type PlanBlock, type PlanVariant } from "./mock-data";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { changeGroups, createCustomScenario, feedbackReasons, questions, scenarios, type Move, type Scenario } from "./mock-data";
+type Screen = "live" | "context" | "plan";
+type IconName = "arrow" | "check" | "lock" | "map" | "plan" | "search" | "spark" | "walk";
 
-type Screen = 1 | 2 | 3 | 4;
-type Answers = Record<string, string>;
+function Icon({ name }: { name: IconName }) {
+  const paths: Record<IconName, ReactNode> = {
+    arrow: <><path d="m9 18 6-6-6-6" /><path d="M15 12H4" /></>,
+    check: <path d="m5 12 4 4L19 6" />,
+    lock: <><rect width="16" height="12" x="4" y="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
+    map: <><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z" /><path d="M9 3v15M15 6v15" /></>,
+    plan: <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></>,
+    search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
+    spark: <><path d="m12 3-1.7 4.3L6 9l4.3 1.7L12 15l1.7-4.3L18 9l-4.3-1.7Z" /><path d="m5 15-.8 2.2L2 18l2.2.8L5 21l.8-2.2L8 18l-2.2-.8Z" /></>,
+    walk: <><circle cx="13" cy="4" r="2" /><path d="m10 22 1-6-3-3 2-5 4 3 3 1M15 22l-2-5 2-4" /></>,
+  };
+  return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+}
 
-function ContextBar({ scenario, screen, goBack }: { scenario: Scenario | null; screen: Screen; goBack: () => void }) {
-  const context = scenario ? [scenario.city, scenario.time, scenario.weather].filter(Boolean).join(" · ") : "In-trip Decision";
-  const secondary = scenario ? [scenario.occasion, scenario.mode === "Solo" ? "Solo trip" : scenario.mode].filter(Boolean).join(" · ") : "旅途中即时决策";
-  return <header className="context-bar">
-    {screen > 1 ? <button className="back-button" onClick={goBack} aria-label="返回上一页">←</button> : <div className="brand-mark">ID</div>}
-    <div className="context-copy"><strong>{scenario && "📍 "}{context}</strong><small>{secondary}</small></div>
-    {scenario && <div className="progress-dots" aria-label={`第 ${screen} 步，共 4 步`}>{[1, 2, 3, 4].map((step) => <i key={step} className={step <= screen ? "active" : ""} />)}</div>}
+function ProductHeader({ screen, onBack }: { screen: Screen; onBack: () => void }) {
+  return <header className="product-header">
+    {screen === "live" ? <div className="icon-button" aria-hidden="true"><span className="monogram">ID</span></div> : <button className="icon-button" type="button" onClick={onBack} aria-label="Go back"><span className="back-glyph">←</span></button>}
+    <div className="trip-heading"><span>Seville getaway</span><strong>Tue, Dec 24 · Day 2</strong></div>
+    <div className="step-indicator" aria-label={`${screen === "live" ? 1 : screen === "context" ? 2 : 3} of 3`}>
+      {["live", "context", "plan"].map((step) => <i key={step} className={step === screen ? "current" : ""} />)}
+    </div>
   </header>;
 }
 
-function LocationPicker({ scenario, onSelect, onClear }: { scenario: Scenario | null; onSelect: (scenario: Scenario) => void; onClear: () => void }) {
-  const [open, setOpen] = useState(!scenario); const [searching, setSearching] = useState(false); const [city, setCity] = useState(""); const [locating, setLocating] = useState(false); const [error, setError] = useState("");
-  const select = (next: Scenario) => { onSelect(next); setOpen(false); setSearching(false); setError(""); };
-  const useLocation = () => {
-    if (!navigator.geolocation) { setError("当前浏览器无法获取位置，可以搜索城市。" ); return; }
-    setLocating(true); setError("");
-    navigator.geolocation.getCurrentPosition(() => { select(createCustomScenario("当前位置")); setLocating(false); }, () => { setLocating(false); setError("没有获取到位置，可以搜索城市或进入 Demo。" ); }, { timeout: 8000 });
-  };
-  const submitCity = (event: FormEvent) => { event.preventDefault(); if (city.trim()) select(createCustomScenario(city.trim())); };
-  if (scenario && !open) return <button className="change-location" onClick={() => setOpen(true)}><span>⌖</span> 更换地点或试试其他 Demo <i>→</i></button>;
-  return <section className="location-picker"><div className="location-heading"><span>📍</span><div><h2>你现在在哪？</h2><p>先确定当前位置，再帮你判断下一步。</p></div>{scenario && <button onClick={() => setOpen(false)} aria-label="收起位置选择">×</button>}</div>
-    <div className="location-actions"><button onClick={useLocation} disabled={locating}><span>⌖</span><b>{locating ? "正在获取位置…" : "使用当前位置"}</b><i>→</i></button><button onClick={() => setSearching((value) => !value)}><span>⌕</span><b>搜索城市</b><i>→</i></button><button className="demo-entry" onClick={() => select(scenarios[0])}><span>01</span><b>Try demo · Seville</b><i>→</i></button></div>
-    {searching && <form className="city-search" onSubmit={submitCity}><input autoFocus value={city} onChange={(event) => setCity(event.target.value)} placeholder="输入城市，例如 Paris" aria-label="搜索城市" /><button disabled={!city.trim()}>确认</button></form>}
-    <div className="more-demos"><span>More demos</span>{scenarios.slice(1).map((item) => <button key={item.id} onClick={() => select(item)}>{item.city}</button>)}</div>
-    {error && <p className="location-error" role="alert">{error}</p>}
-    {scenario && <button className="clear-location" onClick={() => { onClear(); setOpen(true); }}>清除当前位置</button>}
+function BottomNavigation() {
+  return <nav className="bottom-navigation" aria-label="Trip navigation">
+    <span className="active"><Icon name="plan" /><b>Plan</b></span>
+    <span><Icon name="map" /><b>Map</b></span>
+    <span><Icon name="search" /><b>Explore</b></span>
+  </nav>;
+}
+
+function LiveItinerary({ onRepair }: { onRepair: () => void }) {
+  return <section className="app-screen live-screen" aria-labelledby="live-title">
+    <div className="screen-intro"><p className="eyebrow">Today’s plan</p><h2 id="live-title">Three stops in Seville</h2><p>2.4 km planned · dinner reserved at 18:30</p></div>
+    <ol className="itinerary-list">
+      {itinerary.map((stop, index) => <li key={stop.id} className={`itinerary-stop ${stop.status}`}>
+        <span className="stop-marker">{stop.status === "done" ? <Icon name="check" /> : index + 1}</span>
+        <div className="stop-time">{stop.time}</div>
+        <article><div><strong>{stop.title}</strong>{stop.status === "anchor" ? <span className="tiny-lock"><Icon name="lock" /> Fixed</span> : null}</div><p>{stop.meta}</p></article>
+        {index === 0 ? <div className="travel-connector"><Icon name="walk" /> 8 min walk</div> : null}
+        {index === 1 ? <div className="travel-connector gap"><span>135 min open gap</span></div> : null}
+      </li>)}
+    </ol>
+    <aside className="recovery-prompt">
+      <div className="prompt-icon"><Icon name="spark" /></div>
+      <div><strong>Schedule issue detected</strong><p>Repair only this gap. Keep dinner untouched.</p></div>
+      <button type="button" onClick={onRepair}>Repair this gap <Icon name="arrow" /></button>
+    </aside>
   </section>;
 }
 
-function ScreenOne({ scenario, selected, setSelected, note, setNote, next, changeScenario, clearScenario }: { scenario: Scenario | null; selected: string; setSelected: (value: string) => void; note: string; setNote: (value: string) => void; next: () => void; changeScenario: (scenario: Scenario) => void; clearScenario: () => void }) {
-  const canContinue = Boolean(scenario && selected);
-  return <div className="screen-body screen-one">
-    <section className="intro-copy"><p className="kicker">IN-TRIP DECISION</p><h1>接下来去哪？<small>What’s Next?</small></h1><h2>计划变了，或者你变了。</h2><p>不用重新做攻略，先决定下一步。</p></section>
-    <LocationPicker scenario={scenario} onSelect={changeScenario} onClear={clearScenario} />
-    <div className="change-choices">{changeGroups.map((group) => <section className="choice-group" key={group.key}><div className="choice-heading"><span>{group.letter}</span><div><h3>{group.title}</h3><p>{group.description}</p></div></div><div className="chips">{group.options.map((item) => <button key={item} className={selected === item ? "selected" : ""} onClick={() => setSelected(item)}>{item}{selected === item && <b>✓</b>}</button>)}</div></section>)}</div>
-    <label className="story-input"><span>或者直接告诉我发生了什么</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="比如：突然下雨了，但我还不想结束今天。" /></label>
-    <button className="primary-cta" onClick={next} disabled={!canContinue}>{!scenario ? "先选择你的位置" : !selected ? "选择发生了什么" : "决定我的下一步"}<span>→</span></button>
-    <p className="promise">Not the best place. The best next move.</p>
-  </div>;
+function ContextInput({ note, constraint, processing, onNoteChange, onConstraint, onSubmit, onSkip }: {
+  note: string; constraint: Constraint | null; processing: boolean; onNoteChange: (value: string) => void; onConstraint: (value: Constraint) => void; onSubmit: () => void; onSkip: () => void;
+}) {
+  const chips: Array<{ value: Constraint; label: string }> = [
+    { value: "less", label: "Less walking" },
+    { value: "explore", label: "Still want to explore" },
+    { value: "decide", label: "You decide" },
+  ];
+  return <section className="app-screen context-screen" aria-labelledby="context-title">
+    <div className="gap-summary"><span>16:05</span><div><b>Royal Alcázar closed</b><i>→</i><b>18:30 dinner locked</b></div></div>
+    <div className="context-sheet">
+      <p className="eyebrow">Optional context</p><h2 id="context-title">Anything I should know right now?</h2><p className="sheet-copy">Say one thing, tap one constraint—or say nothing.</p>
+      <label className="context-field"><span className="sr-only">Describe how you feel right now</span><textarea value={note} onChange={(event) => onNoteChange(event.target.value)} placeholder="My feet hurt, but I don’t want to end the day…" /></label>
+      <div className="constraint-chips" aria-label="Quick constraints">{chips.map((chip) => <button type="button" key={chip.value} className={constraint === chip.value ? "selected" : ""} aria-pressed={constraint === chip.value} onClick={() => onConstraint(chip.value)}>{chip.label}</button>)}</div>
+      <p className="fallback-note"><Icon name="spark" /> No answer required. Missing context produces a conservative plan.</p>
+      {processing ? <div className="processing-state" role="status"><span /><div><strong>Protecting your 18:30 anchor…</strong><p>Filtering infeasible stops and rebuilding the gap.</p></div></div> : <div className="context-actions"><button className="primary-action" type="button" onClick={onSubmit}>Replan the next 135 min <Icon name="arrow" /></button><button className="quiet-action" type="button" onClick={onSkip}>Skip · use what you know</button></div>}
+    </div>
+  </section>;
 }
 
-function timeCopy(value: string) { return value === "30 分钟左右" ? "大约半小时" : value === "1 小时左右" ? "大约一小时" : "两个小时以上"; }
-function paceCopy(value: string) { return value === "慢一点" ? "想慢一点" : value === "继续逛逛" ? "还想继续逛逛" : value === "找地方坐坐" ? "想找地方坐坐" : "想来点特别的"; }
-function stateTail(scenario: Scenario, selected: string) { if (scenario.weather === "Rainy" || selected === "突然下雨") return "也想先避开这场雨。"; if (scenario.id === "seville" || selected === "我累了" || selected === "不想走远") return "也不太想走远。"; return "也想让下一步轻松一点。"; }
-
-function ScreenTwo({ scenario, selected, answers, setAnswer, next }: { scenario: Scenario; selected: string; answers: Answers; setAnswer: (key: string, value: string) => void; next: () => void }) {
-  const subject = scenario.mode === "Friends" ? "你们" : "你";
-  return <div className="screen-body screen-two"><section className="page-title compact-title"><p className="kicker">STATE CHECK</p><h1>我大概明白了</h1><p>今天不用赶，我们先找一个适合现在的下一步。</p></section>
-    <p className="state-summary"><span>✦</span>{subject}现在还有{timeCopy(answers.time)}，{paceCopy(answers.pace)}，{stateTail(scenario, selected)}</p>
-    <div className="question-list light-questions">{questions.slice(0, 2).map((question) => <section className="mini-question" key={question.key}><div className="question-title"><span>{question.number === "01" ? "A" : "B"}</span><h2>{question.title}</h2></div><div className="option-grid">{question.options.map((option) => <button key={option} className={answers[question.key] === option ? "selected" : ""} onClick={() => setAnswer(question.key, option)}>{question.key === "time" ? option.replace("30 分钟左右", "30 min").replace("1 小时左右", "1h").replace("2 小时以上", "2h+") : option.replace("继续逛逛", "继续逛")}<i /></button>)}</div></section>)}</div>
-    <button className="primary-cta state-cta" onClick={next}>看看接下来可以怎么过 <span>→</span></button>
-  </div>;
+function PlanItem({ block }: { block: PlanBlock }) {
+  return <li className={`plan-item ${block.kind}`}>
+    <span className="plan-dot">{block.kind === "anchor" ? <Icon name="lock" /> : null}</span>
+    <time>{block.time}{block.endTime ? <small>– {block.endTime}</small> : null}</time>
+    <article><div><strong>{block.title}</strong><span>{block.tag}</span></div><p>{block.meta}</p></article>
+  </li>;
 }
 
-function MoveVisual({ type }: { type: Move["visual"] }) {
-  const labels: Record<Move["visual"], string> = { pause: "RESET", wander: "WANDER", spark: "DISCOVER", food: "REFUEL", view: "OPEN AIR", shelter: "STAY DRY", play: "PLAY" };
-  return <div className={`move-visual ${type}`} aria-hidden="true"><span className="visual-orbit orbit-a" /><span className="visual-orbit orbit-b" /><b>{labels[type]}</b></div>;
+function RecoveryPlanView({ variant, flowing, accepted, onLessWalking, onMoreActive, onAccept, onReplay }: {
+  variant: PlanVariant; flowing: boolean; accepted: boolean; onLessWalking: () => void; onMoreActive: () => void; onAccept: () => void; onReplay: () => void;
+}) {
+  const plan = plans[variant];
+  return <section className={`app-screen plan-screen variant-${variant} ${flowing ? "flowing" : ""}`} aria-labelledby="plan-title">
+    <div className="plan-heading"><div><p className="eyebrow">Updated itinerary</p><h2 id="plan-title">Gap repaired.</h2></div><span className="anchor-lock"><Icon name="lock" /> 18:30 locked</span></div>
+    <p className="plan-summary">{plan.summary}</p>
+    <div className="plan-metric"><Icon name="walk" /><span>{plan.walking}</span><i>·</i><span>{plan.buffer}</span></div>
+    <ol className="recovery-timeline" aria-live="polite">{plan.blocks.map((block) => <PlanItem key={`${variant}-${block.id}`} block={block} />)}</ol>
+    <div className="why-card"><span><Icon name="spark" /></span><p><strong>Why this works now</strong>{plan.reason}</p></div>
+    <div className="steer-actions"><button type="button" onClick={onMoreActive}>More active</button><button type="button" className={variant === "less" ? "selected" : ""} onClick={onLessWalking}>Less walking</button><button type="button" className="accept-action" onClick={onAccept}>Accept</button></div>
+    {accepted ? <div className="accepted-toast" role="status"><Icon name="check" /><span>Plan accepted. Back to the trip.</span><button type="button" onClick={onReplay}>Replay</button></div> : null}
+  </section>;
 }
 
-function Serendipity({ level }: { level: Move["serendipity"] }) { return <div className="serendipity"><span>Serendipity</span><div aria-label={`惊喜程度 ${level} / 3`}>{[1, 2, 3].map((dot) => <i key={dot} className={dot <= level ? "active" : ""} />)}</div></div>; }
-
-function MoveCard({ move, index, featured, onSelect }: { move: Move; index: number; featured: boolean; onSelect: (move: Move) => void }) {
-  const [saved, setSaved] = useState(false);
-  return <article className={`move-card ${featured ? "featured" : ""}`}><div className="move-top"><div><span className="move-number">{String(index + 1).padStart(2, "0")} · {featured ? "BEST FIT NOW" : move.category.toUpperCase()}</span><span className="category">{move.category}</span><h2>{move.title}</h2></div><MoveVisual type={move.visual} /></div><div className="move-facts"><div><small>Distance</small><b>{move.distance}</b></div><div><small>Effort</small><b>{move.effort}</b></div><div><small>Availability</small><b>{move.availability}</b></div></div><div className="why"><small>WHY NOW</small><p>{move.whyNow}</p></div><Serendipity level={move.serendipity} /><div className="card-actions"><button className="move-cta" onClick={() => onSelect(move)}>{move.cta} <span>↗</span></button><button className="save-button" onClick={() => setSaved((value) => !value)}>{saved ? "已保存 ✓" : "保存一下"}</button></div></article>;
-}
-
-function ScreenThree({ scenario, answers, groupIndex, setGroupIndex, choose, adjust }: { scenario: Scenario; answers: Answers; groupIndex: number; setGroupIndex: (index: number) => void; choose: (move: Move) => void; adjust: () => void }) {
-  const [homePrompt, setHomePrompt] = useState(false);
-  return <div className="screen-body screen-three"><section className="page-title recommendation-title"><p className="kicker">BEST NEXT MOVES FOR NOW</p><h1>接下来可以这样过</h1><p>不是附近榜单，也不是评分最高，<br />而是更适合此刻的几个选择。</p></section><div className="fit-line"><span>{answers.time}</span><i>·</i><span>{answers.pace}</span></div><div className="move-list">{scenario.moveSets[groupIndex].map((move, index) => <MoveCard key={move.id} move={move} index={index} featured={index === 0} onSelect={choose} />)}</div><div className="secondary-actions"><button onClick={() => setGroupIndex(groupIndex === 0 ? 1 : 0)}><span>↻</span><div><b>换一组建议</b><small>保持当前状态，换一种可能</small></div><i>→</i></button><button onClick={adjust}><span>⌁</span><div><b>调整一下状态</b><small>时间或节奏变了</small></div><i>→</i></button><button className="home-action" onClick={() => setHomePrompt(true)}><span>⌂</span><div><b>我现在想回住处了</b><small>结束今天，也可以是最好的下一步</small></div><i>→</i></button></div>{homePrompt && <div className="overlay" role="dialog" aria-modal="true" aria-label="回住处确认"><div className="home-sheet"><span className="sheet-icon">☾</span><p className="kicker">THAT’S OKAY, TOO.</p><h2>今天到这里也可以。</h2><p>要不要帮你看看回去最轻松的路线？</p><button className="primary-cta" onClick={() => setHomePrompt(false)}>看看轻松回去的路线 <span>→</span></button><button className="quiet-cta" onClick={() => setHomePrompt(false)}>我自己回去就好</button></div></div>}</div>;
-}
-
-function ScreenFour({ scenario, move, restart }: { scenario: Scenario; move: Move; restart: () => void }) {
-  const [feedback, setFeedback] = useState(""); const [reason, setReason] = useState("");
-  return <div className="screen-body screen-four"><section className="page-title"><p className="kicker">FEEDBACK LOOP</p><h1>这个建议适合<br />刚才的你吗？</h1><p className="english-sub">Help me get better next time.</p></section><section className="chosen-move"><small>你选择了 · {move.category}</small><div><span>✓</span><p>“{move.title}”</p></div></section><section className="feedback-block"><h2>这个建议和你刚才的状态匹配吗？</h2><div className="feedback-options">{[["很适合", "☺"], ["还可以", "◡"], ["不太适合", "—"]].map(([label, emoji]) => <button key={label} className={feedback === label ? "selected" : ""} onClick={() => { setFeedback(label); setReason(""); }}><span>{emoji}</span>{label}</button>)}</div></section>{feedback === "很适合" && <div className="learned-message"><span>✦</span><p>收到。{scenario.learning}</p></div>}{feedback === "还可以" && <div className="learned-message neutral"><span>↗</span><p>记下了。下次我会保留这个方向，但重新平衡体力、距离和惊喜程度。</p></div>}{feedback === "不太适合" && <section className="reason-block"><h2>哪里不太对？</h2><div className="chips reason-chips">{feedbackReasons.map((item) => <button key={item} className={reason === item ? "selected" : ""} onClick={() => setReason(item)}>{item}{reason === item && <b>✓</b>}</button>)}</div>{reason && <div className="reason-confirm">知道了，我会把“{reason}”记在这次判断里。</div>}</section>}<div className="final-actions"><button className="primary-cta" onClick={restart}>再问一个新的下一步 <span>→</span></button><button className="outline-cta" onClick={restart}>返回产品首页</button></div><p className="final-promise">Not the best place. The best next move.</p></div>;
+function ProductStory() {
+  return <aside className="product-story">
+    <div className="concept-label"><span /> Interactive concept demo</div>
+    <p className="story-kicker">IN-TRIP DECISION · GAP RECOVERY</p>
+    <h1>Not the best place.<br /><em>The best next move.</em></h1>
+    <p className="story-lead">A low-friction AI interaction that repairs the next 120 minutes when a travel plan breaks.</p>
+    <p className="story-cn">当旅途中一个节点失效，只重排现在到下一个固定安排之间的空档。</p>
+    <ul className="principles" aria-label="Product principles">
+      <li><span>01</span><div><strong>Less input</strong><p>Say one thing—or nothing.</p></div></li>
+      <li><span>02</span><div><strong>One next move</strong><p>No recommendation grid.</p></div></li>
+      <li><span>03</span><div><strong>Easy to steer</strong><p>Correct the plan in one tap.</p></div></li>
+      <li><span>04</span><div><strong>Back to the trip</strong><p>Keep attention off the screen.</p></div></li>
+    </ul>
+    <p className="prototype-note">Mocked Seville context with client-side state orchestration to demonstrate the interaction model.</p>
+  </aside>;
 }
 
 export default function Home() {
-  const [screen, setScreen] = useState<Screen>(1); const [scenario, setScenario] = useState<Scenario | null>(null); const [selectedChange, setSelectedChange] = useState(""); const [note, setNote] = useState(""); const [moveGroup, setMoveGroup] = useState(0); const [chosenMove, setChosenMove] = useState<Move>(scenarios[0].moveSets[0][0]); const [answers, setAnswers] = useState<Answers>({ time: "1 小时左右", pace: "慢一点" });
-  useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [screen, moveGroup, scenario]);
-  const changeScenario = (next: Scenario) => { setScenario(next); setSelectedChange(next.trigger); setNote(""); setAnswers({ time: next.answers.time, pace: next.answers.pace }); setMoveGroup(0); setChosenMove(next.moveSets[0][0]); };
-  const clearScenario = () => { setScenario(null); setSelectedChange(""); setNote(""); setAnswers({ time: "1 小时左右", pace: "慢一点" }); };
-  const goBack = () => setScreen((current) => Math.max(1, current - 1) as Screen); const choose = (move: Move) => { setChosenMove(move); setScreen(4); }; const restart = () => { setScreen(1); setNote(""); setMoveGroup(0); if (scenario) setAnswers({ time: scenario.answers.time, pace: scenario.answers.pace }); };
-  return <main className="prototype-shell"><section className={`screen screen-${screen}`}><ContextBar scenario={scenario} screen={screen} goBack={goBack} />{screen === 1 && <ScreenOne scenario={scenario} selected={selectedChange} setSelected={setSelectedChange} note={note} setNote={setNote} next={() => scenario && selectedChange && setScreen(2)} changeScenario={changeScenario} clearScenario={clearScenario} />}{screen === 2 && scenario && <ScreenTwo scenario={scenario} selected={selectedChange} answers={answers} setAnswer={(key, value) => setAnswers((current) => ({ ...current, [key]: value }))} next={() => setScreen(3)} />}{screen === 3 && scenario && <ScreenThree scenario={scenario} answers={answers} groupIndex={moveGroup} setGroupIndex={setMoveGroup} choose={choose} adjust={() => setScreen(2)} />}{screen === 4 && scenario && <ScreenFour scenario={scenario} move={chosenMove} restart={restart} />}</section></main>;
+  const [screen, setScreen] = useState<Screen>("live");
+  const [note, setNote] = useState("");
+  const [constraint, setConstraint] = useState<Constraint | null>(null);
+  const [variant, setVariant] = useState<PlanVariant>("default");
+  const [processing, setProcessing] = useState(false);
+  const [flowing, setFlowing] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const timers = useRef<number[]>([]);
+
+  useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
+
+  const schedule = (callback: () => void, delay: number) => {
+    const timer = window.setTimeout(callback, delay);
+    timers.current.push(timer);
+  };
+
+  const replay = () => {
+    timers.current.forEach(window.clearTimeout);
+    timers.current = [];
+    setScreen("live"); setNote(""); setConstraint(null); setVariant("default"); setProcessing(false); setFlowing(false); setAccepted(false);
+  };
+
+  const createPlan = (useContext: boolean) => {
+    setProcessing(true); setAccepted(false);
+    const nextVariant = useContext ? selectInitialPlan(constraint, note) : "default";
+    schedule(() => { setVariant(nextVariant); setProcessing(false); setScreen("plan"); }, 720);
+  };
+
+  const steer = (nextVariant: PlanVariant) => {
+    if (flowing || variant === nextVariant) return;
+    setAccepted(false); setFlowing(true);
+    schedule(() => setVariant(nextVariant), 210);
+    schedule(() => setFlowing(false), 760);
+  };
+
+  const goBack = () => {
+    timers.current.forEach(window.clearTimeout);
+    timers.current = [];
+    setScreen(screen === "plan" ? "context" : "live");
+    setProcessing(false); setFlowing(false); setAccepted(false);
+  };
+
+  return <main className="release-page">
+    <ProductStory />
+    <section className="device-stage" aria-label="Interactive Gap Recovery prototype">
+      <div className="device-frame">
+        <div className="device-island" aria-hidden="true" />
+        <div className="status-bar"><span>16:05</span><span>● ◒ ▰</span></div>
+        <div className="product-surface">
+          <ProductHeader screen={screen} onBack={goBack} />
+          {screen === "live" ? <LiveItinerary onRepair={() => setScreen("context")} /> : null}
+          {screen === "context" ? <ContextInput note={note} constraint={constraint} processing={processing} onNoteChange={setNote} onConstraint={(value) => setConstraint((current) => current === value ? null : value)} onSubmit={() => createPlan(true)} onSkip={() => createPlan(false)} /> : null}
+          {screen === "plan" ? <RecoveryPlanView variant={variant} flowing={flowing} accepted={accepted} onLessWalking={() => steer("less")} onMoreActive={() => steer("active")} onAccept={() => setAccepted(true)} onReplay={replay} /> : null}
+          <BottomNavigation />
+        </div>
+      </div>
+      <p className="mobile-disclosure">Concept prototype · mocked context</p>
+    </section>
+  </main>;
 }
