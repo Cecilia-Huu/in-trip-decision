@@ -1,6 +1,6 @@
 # In-trip Decision · Gap Recovery
 
-An interactive portfolio prototype for a low-friction travel decision-recovery capability. When one itinerary stop becomes impossible, it repairs only the gap before the next fixed anchor.
+A mobile-first travel companion for recovering the next part of a trip when plans change. When one itinerary stop becomes impossible, it repairs only the gap before the next fixed anchor.
 
 The public demo uses a self-consistent mocked Seville context and client-side state orchestration. It demonstrates the interaction model without pretending to be a live AI or mapping service.
 

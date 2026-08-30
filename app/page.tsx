@@ -10,6 +10,7 @@ const LANGUAGE_KEY = "in-trip-decision-locale";
 
 const uiCopy = {
   zh: {
+    appName: "In-trip Decision",
     back: "返回",
     tripName: "塞维利亚之旅",
     tripDate: "12月24日 周二 · 第2天",
@@ -101,27 +102,18 @@ const uiCopy = {
     lensModes: [
       { id: "short" as const, label: "30 秒讲完" },
       { id: "story" as const, label: "讲个有意思的故事" },
-      { id: "detail" as const, label: "我想听详细一点" },
+      { id: "detail" as const, label: "详细一点" },
     ],
     lensBack: "重新识景",
     notFoundEyebrow: "识景范围",
-    notFoundTitle: "还没认出来",
-    notFoundCopy: "当前 Demo 先支持：",
+    notFoundTitle: "当前 Demo 暂未收录这个景点",
+    notFoundCopy: "可以试试：",
     tryAnother: "换一个景点",
-    conceptLabel: "交互概念原型",
-    storyKicker: "IN-TRIP DECISION",
-    storyTitleTop: "计划变了，",
-    storyTitleBottom: "就从下一步开始。",
-    storyLead: "不用把整趟旅行想明白，先决定下一步。",
-    storyDetail: "只调整中间这一段。",
-    storyScene: ["16:00 王宫临时关闭", "还有 2 小时 15 分", "18:30 晚餐已预订"],
-    prototypeNote: "使用模拟的塞维利亚行程与本地交互状态，用于展示产品交互逻辑。",
-    prototypeDisclosure: "概念原型 · 模拟行程数据",
-    prototypeAria: "In-trip Decision 交互原型",
     pageTitle: "In-trip Decision · 旅途中，只决定下一步",
     pageDescription: "当旅行计划临时变化，只调整现在到下一个固定安排之间的空档。",
   },
   en: {
+    appName: "In-trip Decision",
     back: "Go back",
     tripName: "Seville getaway",
     tripDate: "Tue, Dec 24 · Day 2",
@@ -220,16 +212,6 @@ const uiCopy = {
     notFoundTitle: "Not in this demo yet.",
     notFoundCopy: "Try:",
     tryAnother: "Try another place",
-    conceptLabel: "Interactive concept demo",
-    storyKicker: "IN-TRIP DECISION",
-    storyTitleTop: "Plans changed?",
-    storyTitleBottom: "Start with what’s next.",
-    storyLead: "You don’t need to figure out the whole trip. Just decide the next step.",
-    storyDetail: "Only repair the space in between.",
-    storyScene: ["16:00 Royal Alcázar closed", "2 hr 15 min open", "18:30 dinner reserved"],
-    prototypeNote: "Mocked Seville context with client-side state orchestration to demonstrate the interaction model.",
-    prototypeDisclosure: "Concept prototype · mocked context",
-    prototypeAria: "In-trip Decision interactive prototype",
     pageTitle: "In-trip Decision · Decide what’s next",
     pageDescription: "When travel plans change, repair only the gap before the next fixed stop.",
   },
@@ -267,17 +249,11 @@ function LanguageToggle({ locale, label, onChange }: { locale: Locale; label: st
   </div>;
 }
 
-function ProductHeader({ activeTab, screen, showBack, locale, t, onBack, onLocaleChange }: { activeTab: AppTab; screen: Screen; showBack: boolean; locale: Locale; t: UiCopy; onBack: () => void; onLocaleChange: (locale: Locale) => void }) {
-  const currentStep = screen === "live" ? 1 : screen === "context" ? 2 : 3;
+function ProductHeader({ showBack, locale, t, onBack, onLocaleChange }: { showBack: boolean; locale: Locale; t: UiCopy; onBack: () => void; onLocaleChange: (locale: Locale) => void }) {
   return <header className="product-header">
-    {showBack ? <button className="icon-button" type="button" onClick={onBack} aria-label={t.back}><span className="back-glyph">←</span></button> : <div className="icon-button" aria-hidden="true"><span className="monogram">ID</span></div>}
-    <div className="trip-heading"><span>{t.tripName}</span><strong>{t.tripDate}</strong></div>
-    <div className="header-tools">
-      <LanguageToggle locale={locale} label={t.language} onChange={onLocaleChange} />
-      {activeTab === "trip" ? <div className="step-indicator" aria-label={t.step(currentStep)}>
-        {(["live", "context", "plan"] as Screen[]).map((step) => <i key={step} className={step === screen ? "current" : ""} />)}
-      </div> : null}
-    </div>
+    {showBack ? <button className="icon-button" type="button" onClick={onBack} aria-label={t.back}><span className="back-glyph">←</span></button> : null}
+    <strong className="app-name">{t.appName}</strong>
+    <LanguageToggle locale={locale} label={t.language} onChange={onLocaleChange} />
   </header>;
 }
 
@@ -296,16 +272,11 @@ function LiveItinerary({ locale, t, onRepair }: { locale: Locale; t: UiCopy; onR
       {itinerary.map((stop, index) => <li key={stop.id} className={`itinerary-stop ${stop.status}`}>
         <span className="stop-marker">{stop.status === "done" ? <Icon name="check" /> : index + 1}</span>
         <div className="stop-time">{stop.time}</div>
-        <article><div><strong>{stop.title}</strong>{stop.status === "anchor" ? <span className="tiny-lock"><Icon name="lock" /> {t.fixed}</span> : null}</div><p>{stop.meta}</p></article>
+        <div className="stop-content"><article><div><strong>{stop.title}</strong>{stop.status === "anchor" ? <span className="tiny-lock"><Icon name="lock" /> {t.fixed}</span> : null}</div><p>{stop.meta}</p></article>{stop.status === "closed" ? <button className="inline-recovery-action" type="button" onClick={onRepair}>{t.triggerAction} <Icon name="arrow" /></button> : null}</div>
         {index === 0 ? <div className="travel-connector"><Icon name="walk" /> {t.firstWalk}</div> : null}
         {index === 1 ? <div className="travel-connector gap"><span>{t.openGap}</span></div> : null}
       </li>)}
     </ol>
-    <aside className="recovery-prompt">
-      <div className="prompt-icon"><Icon name="spark" /></div>
-      <div><strong>{t.triggerTitle}</strong><p>{t.triggerCopy}</p></div>
-      <button type="button" onClick={onRepair}>{t.triggerAction} <Icon name="arrow" /></button>
-    </aside>
   </section>;
 }
 
@@ -465,18 +436,6 @@ function LensScreen({ locale, t, state, selectedLandmark, narrative, onCapture, 
   </section>;
 }
 
-function ProductStory({ t }: { t: UiCopy }) {
-  return <aside className="product-story">
-    <div className="concept-label"><span /> {t.conceptLabel}</div>
-    <p className="story-kicker">{t.storyKicker}</p>
-    <h1>{t.storyTitleTop}<br /><em>{t.storyTitleBottom}</em></h1>
-    <p className="story-lead">{t.storyLead}</p>
-    <ol className="story-scene">{t.storyScene.map((item, index) => <li key={item}><span>{item}</span>{index < t.storyScene.length - 1 ? <i>↓</i> : null}</li>)}</ol>
-    <p className="story-cn">{t.storyDetail}</p>
-    <p className="prototype-note">{t.prototypeNote}</p>
-  </aside>;
-}
-
 export default function Home() {
   const [locale, setLocale] = useState<Locale>(getInitialLocale);
   const [activeTab, setActiveTab] = useState<AppTab>("trip");
@@ -568,14 +527,10 @@ export default function Home() {
 
   const showBack = activeTab === "trip" ? screen !== "live" : activeTab === "lens" && lensState !== "idle";
 
-  return <main className="release-page" data-locale={locale}>
-    <ProductStory t={t} />
-    <section className="device-stage" aria-label={t.prototypeAria}>
-      <div className="device-frame">
-        <div className="device-island" aria-hidden="true" />
-        <div className="status-bar"><span>16:05</span><span>● ◒ ▰</span></div>
+  return <main className="app-page" data-locale={locale}>
+    <section className="app-shell" aria-label={t.appName}>
         <div className="product-surface">
-          <ProductHeader activeTab={activeTab} screen={screen} showBack={showBack} locale={locale} t={t} onBack={goBack} onLocaleChange={setLocale} />
+          <ProductHeader showBack={showBack} locale={locale} t={t} onBack={goBack} onLocaleChange={setLocale} />
           {activeTab === "trip" && screen === "live" ? <LiveItinerary locale={locale} t={t} onRepair={() => setScreen("context")} /> : null}
           {activeTab === "trip" && screen === "context" ? <ContextInput t={t} note={note} constraint={constraint} processing={processing} onNoteChange={setNote} onConstraint={(value) => setConstraint((current) => current === value ? null : value)} onSubmit={() => createPlan(true)} onSkip={() => createPlan(false)} /> : null}
           {activeTab === "trip" && screen === "plan" ? <RecoveryPlanView locale={locale} t={t} variant={variant} constraint={constraint} note={note} flowing={flowing} accepted={accepted} onLessWalking={() => steer("less")} onMoreActive={() => steer("active")} onAccept={() => setAccepted(true)} onReplay={replay} onOpenNearby={() => setActiveTab("nearby")} /> : null}
@@ -583,8 +538,6 @@ export default function Home() {
           {activeTab === "lens" ? <LensScreen locale={locale} t={t} state={lensState} selectedLandmark={selectedLandmark} narrative={lensNarrative} onCapture={startLensRecognition} onLookup={lookUpLandmark} onNarrative={setLensNarrative} onReset={resetLens} /> : null}
           <BottomNavigation activeTab={activeTab} t={t} onChange={setActiveTab} />
         </div>
-      </div>
-      <p className="mobile-disclosure">{t.prototypeDisclosure}</p>
     </section>
   </main>;
 }
