@@ -1,8 +1,149 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { itinerary, plans, selectInitialPlan, type Constraint, type PlanBlock, type PlanVariant } from "./mock-data";
+import { selectInitialPlan, tripData, type Constraint, type Locale, type PlanBlock, type PlanVariant } from "./mock-data";
 
 type Screen = "live" | "context" | "plan";
 type IconName = "arrow" | "check" | "lock" | "map" | "plan" | "search" | "spark" | "walk";
+
+const LANGUAGE_KEY = "in-trip-decision-locale";
+
+const uiCopy = {
+  zh: {
+    back: "返回",
+    tripName: "塞维利亚之旅",
+    tripDate: "12月24日 周二 · 第2天",
+    step: (current: number) => `第 ${current} 步，共 3 步`,
+    language: "切换语言",
+    navLabel: "行程导航",
+    nav: ["行程", "地图", "发现"],
+    todayEyebrow: "今日行程",
+    todayTitle: "今天 · 塞维利亚",
+    todayMeta: "原计划 2.4 公里 · 18:30 晚餐已预订",
+    fixed: "固定",
+    firstWalk: "步行 8 分钟",
+    openGap: "空出 135 分钟",
+    triggerTitle: "计划有变？",
+    triggerCopy: "王宫临时关闭，晚餐保持不变。",
+    triggerAction: "调整这一段",
+    gapClosed: "王宫临时关闭",
+    gapDinner: "18:30 晚餐已预订",
+    contextEyebrow: "现在",
+    contextTitle: "想怎么调整？",
+    contextCopy: "说一句现在的情况，也可以直接继续。",
+    noteLabel: "可以说一句现在的情况",
+    notePlaceholder: "有点累，不想再走太远。",
+    constraintsLabel: "当前状态",
+    constraints: [
+      { value: "less" as const, label: "少走一点" },
+      { value: "explore" as const, label: "还想继续逛" },
+      { value: "decide" as const, label: "随便帮我安排" },
+    ],
+    fallback: "不说也可以，我会先按少绕路、不赶场来安排。",
+    submit: "看看接下来怎么走",
+    skip: "不补充，直接继续",
+    processingTitle: "正在保留 18:30 晚餐…",
+    processingCopy: "只调整中间空出的这一段。",
+    resultEyebrow: "调整后的行程",
+    resultTitle: "接下来这样走",
+    anchorLocked: "18:30 晚餐保留",
+    why: "为什么这样改？",
+    moreActive: "还想多逛一点",
+    lessWalking: "少走一点",
+    keepThis: "就这样",
+    accepted: "已保留这一版，继续旅行吧。",
+    replay: "重新演示",
+    conceptLabel: "交互概念原型",
+    storyKicker: "IN-TRIP DECISION",
+    storyTitleTop: "旅途中，",
+    storyTitleBottom: "只决定下一步。",
+    storyLead: "计划有变时，只调整现在到下一个固定安排之间的空档。",
+    storyDetail: "少输入。少解释。少选择。更快回到旅行本身。",
+    principlesLabel: "产品原则",
+    principles: [
+      ["少输入", "说一句，也可以不说。"],
+      ["少解释", "只说明为什么现在更合适。"],
+      ["少选择", "先给一个可以走的下一步。"],
+      ["回到旅途", "调整完，就继续出发。"],
+    ],
+    prototypeNote: "使用模拟的塞维利亚行程与本地交互状态，用于展示产品交互逻辑。",
+    prototypeDisclosure: "概念原型 · 模拟行程数据",
+    prototypeAria: "In-trip Decision 交互原型",
+    pageTitle: "In-trip Decision · 旅途中，只决定下一步",
+    pageDescription: "当旅行计划临时变化，只调整现在到下一个固定安排之间的空档。",
+  },
+  en: {
+    back: "Go back",
+    tripName: "Seville getaway",
+    tripDate: "Tue, Dec 24 · Day 2",
+    step: (current: number) => `${current} of 3`,
+    language: "Switch language",
+    navLabel: "Trip navigation",
+    nav: ["Plan", "Map", "Explore"],
+    todayEyebrow: "Today’s plan",
+    todayTitle: "Today in Seville",
+    todayMeta: "2.4 km planned · dinner reserved at 18:30",
+    fixed: "Fixed",
+    firstWalk: "8 min walk",
+    openGap: "135 min open gap",
+    triggerTitle: "Plan changed?",
+    triggerCopy: "The Alcázar is closed. Keep dinner as planned.",
+    triggerAction: "Adjust this gap",
+    gapClosed: "Royal Alcázar closed",
+    gapDinner: "18:30 dinner reserved",
+    contextEyebrow: "Right now",
+    contextTitle: "What changed?",
+    contextCopy: "Tell me in one sentence—or continue without it.",
+    noteLabel: "Tell me what matters right now",
+    notePlaceholder: "My feet hurt, but I still want to explore.",
+    constraintsLabel: "Quick constraints",
+    constraints: [
+      { value: "less" as const, label: "Less walking" },
+      { value: "explore" as const, label: "Still want to explore" },
+      { value: "decide" as const, label: "Decide for me" },
+    ],
+    fallback: "No answer needed. I’ll keep it easy and avoid rushing.",
+    submit: "Adjust what’s next",
+    skip: "Continue without input",
+    processingTitle: "Keeping your 18:30 dinner…",
+    processingCopy: "Only the open gap will change.",
+    resultEyebrow: "Updated plan",
+    resultTitle: "I adjusted what’s next.",
+    anchorLocked: "18:30 dinner kept",
+    why: "Why this change?",
+    moreActive: "More active",
+    lessWalking: "Less walking",
+    keepThis: "Keep this",
+    accepted: "Plan kept. Back to the trip.",
+    replay: "Replay",
+    conceptLabel: "Interactive concept demo",
+    storyKicker: "IN-TRIP DECISION",
+    storyTitleTop: "Decide what’s next,",
+    storyTitleBottom: "not the whole trip.",
+    storyLead: "When a plan breaks, repair only the gap before the next fixed stop.",
+    storyDetail: "Less input. Less explanation. Fewer choices. Back to the trip.",
+    principlesLabel: "Product principles",
+    principles: [
+      ["Less input", "Say one thing—or nothing."],
+      ["Less explanation", "Explain only why it fits now."],
+      ["Fewer choices", "Start with one workable next move."],
+      ["Back to the trip", "Adjust, then keep moving."],
+    ],
+    prototypeNote: "Mocked Seville context with client-side state orchestration to demonstrate the interaction model.",
+    prototypeDisclosure: "Concept prototype · mocked context",
+    prototypeAria: "In-trip Decision interactive prototype",
+    pageTitle: "In-trip Decision · Decide what’s next",
+    pageDescription: "When travel plans change, repair only the gap before the next fixed stop.",
+  },
+} as const;
+
+type UiCopy = (typeof uiCopy)[Locale];
+
+function getInitialLocale(): Locale {
+  try {
+    return window.localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "zh";
+  } catch {
+    return "zh";
+  }
+}
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -18,60 +159,67 @@ function Icon({ name }: { name: IconName }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
 
-function ProductHeader({ screen, onBack }: { screen: Screen; onBack: () => void }) {
+function LanguageToggle({ locale, label, onChange }: { locale: Locale; label: string; onChange: (locale: Locale) => void }) {
+  return <div className="language-toggle" role="group" aria-label={label}>
+    <button type="button" className={locale === "zh" ? "active" : ""} aria-pressed={locale === "zh"} onClick={() => onChange("zh")}>中</button>
+    <span aria-hidden="true">|</span>
+    <button type="button" className={locale === "en" ? "active" : ""} aria-pressed={locale === "en"} onClick={() => onChange("en")}>EN</button>
+  </div>;
+}
+
+function ProductHeader({ screen, locale, t, onBack, onLocaleChange }: { screen: Screen; locale: Locale; t: UiCopy; onBack: () => void; onLocaleChange: (locale: Locale) => void }) {
+  const currentStep = screen === "live" ? 1 : screen === "context" ? 2 : 3;
   return <header className="product-header">
-    {screen === "live" ? <div className="icon-button" aria-hidden="true"><span className="monogram">ID</span></div> : <button className="icon-button" type="button" onClick={onBack} aria-label="Go back"><span className="back-glyph">←</span></button>}
-    <div className="trip-heading"><span>Seville getaway</span><strong>Tue, Dec 24 · Day 2</strong></div>
-    <div className="step-indicator" aria-label={`${screen === "live" ? 1 : screen === "context" ? 2 : 3} of 3`}>
-      {["live", "context", "plan"].map((step) => <i key={step} className={step === screen ? "current" : ""} />)}
+    {screen === "live" ? <div className="icon-button" aria-hidden="true"><span className="monogram">ID</span></div> : <button className="icon-button" type="button" onClick={onBack} aria-label={t.back}><span className="back-glyph">←</span></button>}
+    <div className="trip-heading"><span>{t.tripName}</span><strong>{t.tripDate}</strong></div>
+    <div className="header-tools">
+      <LanguageToggle locale={locale} label={t.language} onChange={onLocaleChange} />
+      <div className="step-indicator" aria-label={t.step(currentStep)}>
+        {(["live", "context", "plan"] as Screen[]).map((step) => <i key={step} className={step === screen ? "current" : ""} />)}
+      </div>
     </div>
   </header>;
 }
 
-function BottomNavigation() {
-  return <nav className="bottom-navigation" aria-label="Trip navigation">
-    <span className="active"><Icon name="plan" /><b>Plan</b></span>
-    <span><Icon name="map" /><b>Map</b></span>
-    <span><Icon name="search" /><b>Explore</b></span>
+function BottomNavigation({ t }: { t: UiCopy }) {
+  const icons: IconName[] = ["plan", "map", "search"];
+  return <nav className="bottom-navigation" aria-label={t.navLabel}>
+    {t.nav.map((item, index) => <span key={item} className={index === 0 ? "active" : ""}><Icon name={icons[index]} /><b>{item}</b></span>)}
   </nav>;
 }
 
-function LiveItinerary({ onRepair }: { onRepair: () => void }) {
+function LiveItinerary({ locale, t, onRepair }: { locale: Locale; t: UiCopy; onRepair: () => void }) {
+  const itinerary = tripData[locale].itinerary;
   return <section className="app-screen live-screen" aria-labelledby="live-title">
-    <div className="screen-intro"><p className="eyebrow">Today’s plan</p><h2 id="live-title">Three stops in Seville</h2><p>2.4 km planned · dinner reserved at 18:30</p></div>
+    <div className="screen-intro"><p className="eyebrow">{t.todayEyebrow}</p><h2 id="live-title">{t.todayTitle}</h2><p>{t.todayMeta}</p></div>
     <ol className="itinerary-list">
       {itinerary.map((stop, index) => <li key={stop.id} className={`itinerary-stop ${stop.status}`}>
         <span className="stop-marker">{stop.status === "done" ? <Icon name="check" /> : index + 1}</span>
         <div className="stop-time">{stop.time}</div>
-        <article><div><strong>{stop.title}</strong>{stop.status === "anchor" ? <span className="tiny-lock"><Icon name="lock" /> Fixed</span> : null}</div><p>{stop.meta}</p></article>
-        {index === 0 ? <div className="travel-connector"><Icon name="walk" /> 8 min walk</div> : null}
-        {index === 1 ? <div className="travel-connector gap"><span>135 min open gap</span></div> : null}
+        <article><div><strong>{stop.title}</strong>{stop.status === "anchor" ? <span className="tiny-lock"><Icon name="lock" /> {t.fixed}</span> : null}</div><p>{stop.meta}</p></article>
+        {index === 0 ? <div className="travel-connector"><Icon name="walk" /> {t.firstWalk}</div> : null}
+        {index === 1 ? <div className="travel-connector gap"><span>{t.openGap}</span></div> : null}
       </li>)}
     </ol>
     <aside className="recovery-prompt">
       <div className="prompt-icon"><Icon name="spark" /></div>
-      <div><strong>Schedule issue detected</strong><p>Repair only this gap. Keep dinner untouched.</p></div>
-      <button type="button" onClick={onRepair}>Repair this gap <Icon name="arrow" /></button>
+      <div><strong>{t.triggerTitle}</strong><p>{t.triggerCopy}</p></div>
+      <button type="button" onClick={onRepair}>{t.triggerAction} <Icon name="arrow" /></button>
     </aside>
   </section>;
 }
 
-function ContextInput({ note, constraint, processing, onNoteChange, onConstraint, onSubmit, onSkip }: {
-  note: string; constraint: Constraint | null; processing: boolean; onNoteChange: (value: string) => void; onConstraint: (value: Constraint) => void; onSubmit: () => void; onSkip: () => void;
+function ContextInput({ t, note, constraint, processing, onNoteChange, onConstraint, onSubmit, onSkip }: {
+  t: UiCopy; note: string; constraint: Constraint | null; processing: boolean; onNoteChange: (value: string) => void; onConstraint: (value: Constraint) => void; onSubmit: () => void; onSkip: () => void;
 }) {
-  const chips: Array<{ value: Constraint; label: string }> = [
-    { value: "less", label: "Less walking" },
-    { value: "explore", label: "Still want to explore" },
-    { value: "decide", label: "You decide" },
-  ];
   return <section className="app-screen context-screen" aria-labelledby="context-title">
-    <div className="gap-summary"><span>16:05</span><div><b>Royal Alcázar closed</b><i>→</i><b>18:30 dinner locked</b></div></div>
+    <div className="gap-summary"><span>16:05</span><div><b>{t.gapClosed}</b><i>→</i><b>{t.gapDinner}</b></div></div>
     <div className="context-sheet">
-      <p className="eyebrow">Optional context</p><h2 id="context-title">Anything I should know right now?</h2><p className="sheet-copy">Say one thing, tap one constraint—or say nothing.</p>
-      <label className="context-field"><span className="sr-only">Describe how you feel right now</span><textarea value={note} onChange={(event) => onNoteChange(event.target.value)} placeholder="My feet hurt, but I don’t want to end the day…" /></label>
-      <div className="constraint-chips" aria-label="Quick constraints">{chips.map((chip) => <button type="button" key={chip.value} className={constraint === chip.value ? "selected" : ""} aria-pressed={constraint === chip.value} onClick={() => onConstraint(chip.value)}>{chip.label}</button>)}</div>
-      <p className="fallback-note"><Icon name="spark" /> No answer required. Missing context produces a conservative plan.</p>
-      {processing ? <div className="processing-state" role="status"><span /><div><strong>Protecting your 18:30 anchor…</strong><p>Filtering infeasible stops and rebuilding the gap.</p></div></div> : <div className="context-actions"><button className="primary-action" type="button" onClick={onSubmit}>Replan the next 135 min <Icon name="arrow" /></button><button className="quiet-action" type="button" onClick={onSkip}>Skip · use what you know</button></div>}
+      <p className="eyebrow">{t.contextEyebrow}</p><h2 id="context-title">{t.contextTitle}</h2><p className="sheet-copy">{t.contextCopy}</p>
+      <label className="context-field"><span className="sr-only">{t.noteLabel}</span><textarea value={note} onChange={(event) => onNoteChange(event.target.value)} placeholder={t.notePlaceholder} /></label>
+      <div className="constraint-chips" aria-label={t.constraintsLabel}>{t.constraints.map((chip) => <button type="button" key={chip.value} className={constraint === chip.value ? "selected" : ""} aria-pressed={constraint === chip.value} onClick={() => onConstraint(chip.value)}>{chip.label}</button>)}</div>
+      <p className="fallback-note"><Icon name="spark" /> {t.fallback}</p>
+      {processing ? <div className="processing-state" role="status"><span /><div><strong>{t.processingTitle}</strong><p>{t.processingCopy}</p></div></div> : <div className="context-actions"><button className="primary-action" type="button" onClick={onSubmit}>{t.submit} <Icon name="arrow" /></button><button className="quiet-action" type="button" onClick={onSkip}>{t.skip}</button></div>}
     </div>
   </section>;
 }
@@ -84,39 +232,37 @@ function PlanItem({ block }: { block: PlanBlock }) {
   </li>;
 }
 
-function RecoveryPlanView({ variant, flowing, accepted, onLessWalking, onMoreActive, onAccept, onReplay }: {
-  variant: PlanVariant; flowing: boolean; accepted: boolean; onLessWalking: () => void; onMoreActive: () => void; onAccept: () => void; onReplay: () => void;
+function RecoveryPlanView({ locale, t, variant, flowing, accepted, onLessWalking, onMoreActive, onAccept, onReplay }: {
+  locale: Locale; t: UiCopy; variant: PlanVariant; flowing: boolean; accepted: boolean; onLessWalking: () => void; onMoreActive: () => void; onAccept: () => void; onReplay: () => void;
 }) {
-  const plan = plans[variant];
+  const plan = tripData[locale].plans[variant];
   return <section className={`app-screen plan-screen variant-${variant} ${flowing ? "flowing" : ""}`} aria-labelledby="plan-title">
-    <div className="plan-heading"><div><p className="eyebrow">Updated itinerary</p><h2 id="plan-title">Gap repaired.</h2></div><span className="anchor-lock"><Icon name="lock" /> 18:30 locked</span></div>
+    <div className="plan-heading"><div><p className="eyebrow">{t.resultEyebrow}</p><h2 id="plan-title">{t.resultTitle}</h2></div><span className="anchor-lock"><Icon name="lock" /> {t.anchorLocked}</span></div>
     <p className="plan-summary">{plan.summary}</p>
     <div className="plan-metric"><Icon name="walk" /><span>{plan.walking}</span><i>·</i><span>{plan.buffer}</span></div>
     <ol className="recovery-timeline" aria-live="polite">{plan.blocks.map((block) => <PlanItem key={`${variant}-${block.id}`} block={block} />)}</ol>
-    <div className="why-card"><span><Icon name="spark" /></span><p><strong>Why this works now</strong>{plan.reason}</p></div>
-    <div className="steer-actions"><button type="button" onClick={onMoreActive}>More active</button><button type="button" className={variant === "less" ? "selected" : ""} onClick={onLessWalking}>Less walking</button><button type="button" className="accept-action" onClick={onAccept}>Accept</button></div>
-    {accepted ? <div className="accepted-toast" role="status"><Icon name="check" /><span>Plan accepted. Back to the trip.</span><button type="button" onClick={onReplay}>Replay</button></div> : null}
+    <div className="why-card"><span><Icon name="spark" /></span><p><strong>{t.why}</strong>{plan.reason}</p></div>
+    <div className="steer-actions"><button type="button" onClick={onMoreActive}>{t.moreActive}</button><button type="button" className={variant === "less" ? "selected" : ""} onClick={onLessWalking}>{t.lessWalking}</button><button type="button" className="accept-action" onClick={onAccept}>{t.keepThis}</button></div>
+    {accepted ? <div className="accepted-toast" role="status"><Icon name="check" /><span>{t.accepted}</span><button type="button" onClick={onReplay}>{t.replay}</button></div> : null}
   </section>;
 }
 
-function ProductStory() {
+function ProductStory({ t }: { t: UiCopy }) {
   return <aside className="product-story">
-    <div className="concept-label"><span /> Interactive concept demo</div>
-    <p className="story-kicker">IN-TRIP DECISION · GAP RECOVERY</p>
-    <h1>Not the best place.<br /><em>The best next move.</em></h1>
-    <p className="story-lead">A low-friction AI interaction that repairs the next 120 minutes when a travel plan breaks.</p>
-    <p className="story-cn">当旅途中一个节点失效，只重排现在到下一个固定安排之间的空档。</p>
-    <ul className="principles" aria-label="Product principles">
-      <li><span>01</span><div><strong>Less input</strong><p>Say one thing—or nothing.</p></div></li>
-      <li><span>02</span><div><strong>One next move</strong><p>No recommendation grid.</p></div></li>
-      <li><span>03</span><div><strong>Easy to steer</strong><p>Correct the plan in one tap.</p></div></li>
-      <li><span>04</span><div><strong>Back to the trip</strong><p>Keep attention off the screen.</p></div></li>
+    <div className="concept-label"><span /> {t.conceptLabel}</div>
+    <p className="story-kicker">{t.storyKicker}</p>
+    <h1>{t.storyTitleTop}<br /><em>{t.storyTitleBottom}</em></h1>
+    <p className="story-lead">{t.storyLead}</p>
+    <p className="story-cn">{t.storyDetail}</p>
+    <ul className="principles" aria-label={t.principlesLabel}>
+      {t.principles.map((principle, index) => <li key={principle[0]}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{principle[0]}</strong><p>{principle[1]}</p></div></li>)}
     </ul>
-    <p className="prototype-note">Mocked Seville context with client-side state orchestration to demonstrate the interaction model.</p>
+    <p className="prototype-note">{t.prototypeNote}</p>
   </aside>;
 }
 
 export default function Home() {
+  const [locale, setLocale] = useState<Locale>(getInitialLocale);
   const [screen, setScreen] = useState<Screen>("live");
   const [note, setNote] = useState("");
   const [constraint, setConstraint] = useState<Constraint | null>(null);
@@ -125,8 +271,20 @@ export default function Home() {
   const [flowing, setFlowing] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const timers = useRef<number[]>([]);
+  const t = uiCopy[locale];
 
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+    document.title = t.pageTitle;
+    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute("content", t.pageDescription);
+    try {
+      window.localStorage.setItem(LANGUAGE_KEY, locale);
+    } catch {
+      // Language persistence is optional when storage is unavailable.
+    }
+  }, [locale, t.pageDescription, t.pageTitle]);
 
   const schedule = (callback: () => void, delay: number) => {
     const timer = window.setTimeout(callback, delay);
@@ -159,21 +317,21 @@ export default function Home() {
     setProcessing(false); setFlowing(false); setAccepted(false);
   };
 
-  return <main className="release-page">
-    <ProductStory />
-    <section className="device-stage" aria-label="Interactive Gap Recovery prototype">
+  return <main className="release-page" data-locale={locale}>
+    <ProductStory t={t} />
+    <section className="device-stage" aria-label={t.prototypeAria}>
       <div className="device-frame">
         <div className="device-island" aria-hidden="true" />
         <div className="status-bar"><span>16:05</span><span>● ◒ ▰</span></div>
         <div className="product-surface">
-          <ProductHeader screen={screen} onBack={goBack} />
-          {screen === "live" ? <LiveItinerary onRepair={() => setScreen("context")} /> : null}
-          {screen === "context" ? <ContextInput note={note} constraint={constraint} processing={processing} onNoteChange={setNote} onConstraint={(value) => setConstraint((current) => current === value ? null : value)} onSubmit={() => createPlan(true)} onSkip={() => createPlan(false)} /> : null}
-          {screen === "plan" ? <RecoveryPlanView variant={variant} flowing={flowing} accepted={accepted} onLessWalking={() => steer("less")} onMoreActive={() => steer("active")} onAccept={() => setAccepted(true)} onReplay={replay} /> : null}
-          <BottomNavigation />
+          <ProductHeader screen={screen} locale={locale} t={t} onBack={goBack} onLocaleChange={setLocale} />
+          {screen === "live" ? <LiveItinerary locale={locale} t={t} onRepair={() => setScreen("context")} /> : null}
+          {screen === "context" ? <ContextInput t={t} note={note} constraint={constraint} processing={processing} onNoteChange={setNote} onConstraint={(value) => setConstraint((current) => current === value ? null : value)} onSubmit={() => createPlan(true)} onSkip={() => createPlan(false)} /> : null}
+          {screen === "plan" ? <RecoveryPlanView locale={locale} t={t} variant={variant} flowing={flowing} accepted={accepted} onLessWalking={() => steer("less")} onMoreActive={() => steer("active")} onAccept={() => setAccepted(true)} onReplay={replay} /> : null}
+          <BottomNavigation t={t} />
         </div>
       </div>
-      <p className="mobile-disclosure">Concept prototype · mocked context</p>
+      <p className="mobile-disclosure">{t.prototypeDisclosure}</p>
     </section>
   </main>;
 }
