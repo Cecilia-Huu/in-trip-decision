@@ -1,6 +1,8 @@
 export type Locale = "zh" | "en";
 export type Constraint = "less" | "explore" | "decide";
 export type PlanVariant = "default" | "less" | "active";
+export type LandmarkId = "milanCathedral" | "sevilleCathedral" | "sagradaFamilia";
+export type LandmarkNarrative = "short" | "story" | "detail";
 
 export type ItineraryStop = {
   id: string;
@@ -126,6 +128,127 @@ export const tripData: Record<Locale, LocalizedTripData> = {
     },
   },
 };
+
+export type LandmarkContent = {
+  name: string;
+  location: string;
+  narratives: Record<LandmarkNarrative, string>;
+  lookUp: string;
+};
+
+export type Landmark = {
+  id: LandmarkId;
+  aliases: string[];
+  content: Record<Locale, LandmarkContent>;
+};
+
+export const landmarks: Record<LandmarkId, Landmark> = {
+  milanCathedral: {
+    id: "milanCathedral",
+    aliases: ["米兰大教堂", "milan cathedral", "duomo di milano", "milan duomo", "duomo milano"],
+    content: {
+      zh: {
+        name: "米兰大教堂",
+        location: "Milano · Duomo di Milano",
+        narratives: {
+          short: "它花了将近六个世纪才完成。这也是为什么你会在同一座建筑上看到不同时期留下来的风格和细节。",
+          story: "修建期间，米兰换过许多统治者和建筑师。近六百年的接力，让它不像一张一次画完的图纸，更像一座不断生长的城市记忆。",
+          detail: "工程始于 1386 年，直到 20 世纪仍在完成最后细节。漫长工期让哥特式结构、不同年代的雕刻与修复痕迹同时留在建筑上。",
+        },
+        lookUp: "看看屋顶上密密麻麻的尖塔。最高处那尊金色雕像是 Madonnina，也是米兰最重要的城市象征之一。",
+      },
+      en: {
+        name: "Milan Cathedral",
+        location: "Milano · Duomo di Milano",
+        narratives: {
+          short: "It took nearly six centuries to finish. That is why details from very different periods can sit together on the same building.",
+          story: "Milan changed rulers and architects while the cathedral kept growing. Nearly six centuries of hand-offs turned it into a layered record of the city, not a building made from one finished plan.",
+          detail: "Work began in 1386, with final details still being completed in the 20th century. Its long construction brought Gothic structure, later sculpture, and visible restoration into the same façade.",
+        },
+        lookUp: "Look for the forest of spires on the roof. The golden figure at the highest point is the Madonnina, one of Milan’s most important city symbols.",
+      },
+    },
+  },
+  sevilleCathedral: {
+    id: "sevilleCathedral",
+    aliases: ["塞维利亚大教堂", "seville cathedral", "catedral de sevilla", "sevilla cathedral", "giralda"],
+    content: {
+      zh: {
+        name: "塞维利亚大教堂",
+        location: "",
+        narratives: {
+          short: "它建在原清真寺所在地。今天留下来的吉拉达塔，是这座城市不同历史时期叠在一起最直观的痕迹之一。",
+          story: "大教堂的建造者曾说，要造一座让后人觉得他们“近乎疯狂”的教堂。于是，原清真寺的庭院与高塔被留进了新的城市地标里。",
+          detail: "这座教堂从 15 世纪开始修建，主体采用哥特式结构。橘园庭院和吉拉达塔没有被抹去，至今仍把两段历史并置在同一个空间里。",
+        },
+        lookUp: "看看吉拉达塔。它最初并不是钟塔，而是一座宣礼塔。",
+      },
+      en: {
+        name: "Seville Cathedral",
+        location: "",
+        narratives: {
+          short: "It stands on the site of a former mosque. The surviving Giralda tower is one of the clearest places to see different chapters of Seville’s history overlap.",
+          story: "The cathedral’s builders reportedly wanted something so ambitious that later generations would think them mad. A mosque’s courtyard and tower were kept inside that new landmark.",
+          detail: "Construction began in the 15th century, with a vast Gothic structure rising over the former mosque. The orange-tree courtyard and Giralda tower remain, placing both histories in the same space.",
+        },
+        lookUp: "Find the Giralda. It was not built as a bell tower—it began as a minaret.",
+      },
+    },
+  },
+  sagradaFamilia: {
+    id: "sagradaFamilia",
+    aliases: ["圣家堂", "sagrada família", "sagrada familia", "basilica de la sagrada familia", "la sagrada familia"],
+    content: {
+      zh: {
+        name: "圣家堂",
+        location: "Barcelona · Sagrada Família",
+        narratives: {
+          short: "高迪没有把它设计成一座普通的石头教堂。他大量借用了树木、枝干和自然结构，所以进入内部时，会有一种站在森林里的感觉。",
+          story: "高迪相信自然界没有直线。圣家堂里的柱子会分叉，光线也会像穿过树冠一样落下，让石头建筑有了森林般的生命感。",
+          detail: "高迪用双曲面、螺旋和分叉柱，把自然结构变成承重方式。内部柱子不仅像树，也真的把顶部重量沿不同方向传递下去。",
+        },
+        lookUp: "看看内部那些分叉的柱子。它们不是单纯装饰，而是在模拟树干向上生长、分枝的结构。",
+      },
+      en: {
+        name: "Sagrada Família",
+        location: "Barcelona · Sagrada Família",
+        narratives: {
+          short: "Gaudí did not design it as an ordinary stone church. He borrowed from trees, branches, and natural structures, so the interior can feel like standing in a forest.",
+          story: "Gaudí believed nature had no straight lines. Columns branch overhead and light falls through them like a canopy, giving a stone building the feeling of a living forest.",
+          detail: "Gaudí used hyperboloids, spirals, and branching columns to turn natural forms into structure. The columns do not only resemble trees—they distribute the roof’s weight in branching paths.",
+        },
+        lookUp: "Look at the columns branching overhead. They are not just decoration; they imitate the way a tree trunk grows and divides into limbs.",
+      },
+    },
+  },
+};
+
+function normalizeLandmarkQuery(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .replace(/[·'’.,，。()（）-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const landmarkAliasIndex = new Map<string, LandmarkId>();
+Object.values(landmarks).forEach((landmark) => {
+  landmark.aliases.forEach((alias) => landmarkAliasIndex.set(normalizeLandmarkQuery(alias), landmark.id));
+});
+
+export function findLandmark(query: string): Landmark | null {
+  const normalized = normalizeLandmarkQuery(query);
+  if (!normalized) return null;
+  const exactMatch = landmarkAliasIndex.get(normalized);
+  if (exactMatch) return landmarks[exactMatch];
+
+  for (const [alias, landmarkId] of landmarkAliasIndex) {
+    if (alias.length >= 5 && normalized.includes(alias)) return landmarks[landmarkId];
+  }
+  return null;
+}
 
 const lowEnergyPattern = /(feet|foot|tired|exhausted|hurt|sore|less walk|脚|腿|累|走不动|少走)/i;
 const activePattern = /(active|energy|explore|museum|keep going|继续|逛|有精神|博物馆)/i;

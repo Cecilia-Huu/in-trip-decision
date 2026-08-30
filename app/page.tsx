@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { selectInitialPlan, tripData, type Constraint, type Locale, type PlanBlock, type PlanVariant } from "./mock-data";
+import { findLandmark, landmarks, selectInitialPlan, tripData, type Constraint, type LandmarkId, type LandmarkNarrative, type Locale, type PlanBlock, type PlanVariant } from "./mock-data";
 
 type Screen = "live" | "context" | "plan";
 type AppTab = "trip" | "nearby" | "lens";
-type LensState = "idle" | "scanning" | "result";
-type LensNarrative = "short" | "story" | "detail";
+type LensState = "idle" | "scanning" | "result" | "notFound";
 type IconName = "arrow" | "camera" | "check" | "lock" | "map" | "plan" | "spark" | "walk";
 
 const LANGUAGE_KEY = "in-trip-decision-locale";
@@ -84,38 +83,36 @@ const uiCopy = {
     lensPromise: "攻略可以不做，眼前的故事别错过。",
     capture: "拍一下",
     placeInputLabel: "输入景点名称",
-    placeInputPlaceholder: "也可以输入景点名称",
+    placeInputPlaceholder: "输入景点名称",
+    placeInputExample: "例如：米兰大教堂",
     placeLookup: "查看",
     scanning: "正在辨认眼前的建筑…",
     scanningHint: "不用举着手机等。",
     lookingAt: "你正在看",
-    cathedral: "塞维利亚大教堂",
     oneThing: "先知道这一件事就够了",
     lookUp: "抬头找找 👀",
-    lookUpCopy: "看看那座塔。它最初并不是钟塔，而是一座宣礼塔。",
     lensModes: [
       { id: "short" as const, label: "30 秒讲完" },
       { id: "story" as const, label: "讲个有意思的故事" },
       { id: "detail" as const, label: "我想听详细一点" },
     ],
-    lensNarratives: {
-      short: "它建在原清真寺所在地。今天仍保留下来的吉拉达塔，是这座城市两段历史叠在一起最直观的痕迹之一。",
-      story: "大教堂的建造者曾说，要造一座让后人觉得他们“近乎疯狂”的教堂。于是，一座清真寺的庭院与高塔，被留进了新的城市地标里。",
-      detail: "这座教堂从 15 世纪开始修建，主体采用哥特式结构。它没有抹去原清真寺的全部痕迹：橘园庭院和吉拉达塔，至今仍把两段历史并置在同一个空间里。",
-    },
     lensBack: "重新识景",
+    notFoundEyebrow: "识景范围",
+    notFoundTitle: "还没认出来",
+    notFoundCopy: "当前 Demo 先支持：",
+    tryAnother: "换一个景点",
     conceptLabel: "交互概念原型",
     storyKicker: "IN-TRIP DECISION",
-    storyTitleTop: "旅途中，",
-    storyTitleBottom: "只决定下一步。",
-    storyLead: "计划有变时，只调整现在到下一个固定安排之间的空档。",
-    storyDetail: "少输入。少解释。少选择。更快回到旅行本身。",
-    principlesLabel: "产品原则",
+    storyTitleTop: "计划变了，",
+    storyTitleBottom: "就从下一步开始。",
+    storyLead: "不用把整趟旅行想明白，先决定下一步。",
+    storyDetail: "轻一点，松一点，走着看也没关系。",
+    principlesLabel: "旅途中三个片刻",
     principles: [
-      ["少输入", "说一句，也可以不说。"],
-      ["少解释", "只说明为什么现在更合适。"],
-      ["少选择", "先给一个可以走的下一步。"],
-      ["回到旅途", "调整完，就继续出发。"],
+      ["计划有变", "只调整眼前这一段。"],
+      ["顺路就好", "不为最近的地方绕远。"],
+      ["看到什么", "当下就能听懂。"],
+      ["继续旅行", "少看屏幕，多看身边。"],
     ],
     prototypeNote: "使用模拟的塞维利亚行程与本地交互状态，用于展示产品交互逻辑。",
     prototypeDisclosure: "概念原型 · 模拟行程数据",
@@ -197,38 +194,36 @@ const uiCopy = {
     lensPromise: "Skip the homework. Don’t miss the story in front of you.",
     capture: "Take a photo",
     placeInputLabel: "Enter a place name",
-    placeInputPlaceholder: "Or enter a place name",
+    placeInputPlaceholder: "Enter a place name",
+    placeInputExample: "For example: Milan Cathedral",
     placeLookup: "View",
     scanning: "Recognising what’s in front of you…",
     scanningHint: "You don’t need to keep holding the phone up.",
     lookingAt: "You’re looking at",
-    cathedral: "Seville Cathedral",
     oneThing: "One thing worth knowing",
     lookUp: "Look up 👀",
-    lookUpCopy: "Find the tower. It was not built as a bell tower—it began as a minaret.",
     lensModes: [
       { id: "short" as const, label: "30-second version" },
       { id: "story" as const, label: "Tell me a good story" },
       { id: "detail" as const, label: "A little more detail" },
     ],
-    lensNarratives: {
-      short: "It stands on the site of a former mosque. The surviving Giralda tower is one of the clearest places to see two chapters of Seville’s history overlap.",
-      story: "The cathedral’s builders reportedly wanted something so ambitious that later generations would think them mad. A mosque’s courtyard and tower were kept inside that new landmark.",
-      detail: "Construction began in the 15th century, with a vast Gothic structure rising over the former mosque. The orange-tree courtyard and Giralda tower remain, placing both histories in the same space.",
-    },
     lensBack: "Scan again",
+    notFoundEyebrow: "Demo coverage",
+    notFoundTitle: "Not in this demo yet.",
+    notFoundCopy: "Try:",
+    tryAnother: "Try another place",
     conceptLabel: "Interactive concept demo",
     storyKicker: "IN-TRIP DECISION",
-    storyTitleTop: "Decide what’s next,",
-    storyTitleBottom: "not the whole trip.",
-    storyLead: "When a plan breaks, repair only the gap before the next fixed stop.",
-    storyDetail: "Less input. Less explanation. Fewer choices. Back to the trip.",
-    principlesLabel: "Product principles",
+    storyTitleTop: "Plans changed?",
+    storyTitleBottom: "Start with what’s next.",
+    storyLead: "You don’t need to figure out the whole trip. Just decide the next step.",
+    storyDetail: "Keep it light. Keep moving. See what happens.",
+    principlesLabel: "Three in-trip moments",
     principles: [
-      ["Less input", "Say one thing—or nothing."],
-      ["Less explanation", "Explain only why it fits now."],
-      ["Fewer choices", "Start with one workable next move."],
-      ["Back to the trip", "Adjust, then keep moving."],
+      ["Plans change", "Repair only this part."],
+      ["On the way", "Choose the route, not the nearest."],
+      ["What’s that?", "Understand what’s in front of you."],
+      ["Keep travelling", "Less screen, more place."],
     ],
     prototypeNote: "Mocked Seville context with client-side state orchestration to demonstrate the interaction model.",
     prototypeDisclosure: "Concept prototype · mocked context",
@@ -374,40 +369,54 @@ function NearbyScreen({ t, selected, onSelect }: { t: UiCopy; selected: string |
   </section>;
 }
 
-function CathedralPreview({ compact = false }: { compact?: boolean }) {
-  return <div className={`cathedral-preview ${compact ? "compact" : ""}`} aria-hidden="true">
+function LandmarkPreview({ landmarkId, compact = false }: { landmarkId: LandmarkId; compact?: boolean }) {
+  return <div className={`cathedral-preview landmark-${landmarkId} ${compact ? "compact" : ""}`} aria-hidden="true">
     <span className="sun-disc" /><span className="cathedral-body" /><span className="cathedral-tower" /><span className="cathedral-spire" /><span className="cathedral-arch arch-one" /><span className="cathedral-arch arch-two" /><span className="cathedral-arch arch-three" />
   </div>;
 }
 
-function LensResult({ t, narrative, onNarrative }: { t: UiCopy; narrative: LensNarrative; onNarrative: (narrative: LensNarrative) => void }) {
+function LensResult({ locale, landmarkId, t, narrative, onNarrative }: { locale: Locale; landmarkId: LandmarkId; t: UiCopy; narrative: LandmarkNarrative; onNarrative: (narrative: LandmarkNarrative) => void }) {
+  const landmark = landmarks[landmarkId].content[locale];
   return <section className="app-screen lens-result" aria-labelledby="lens-result-title">
-    <div className="lens-result-heading"><CathedralPreview compact /><div><p className="eyebrow">{t.lookingAt}</p><h2 id="lens-result-title">{t.cathedral}</h2></div></div>
-    <div className="lens-story primary-story"><p className="eyebrow">{t.oneThing}</p><p>{t.lensNarratives[narrative]}</p></div>
-    <div className="look-up-card"><span>↗</span><p><strong>{t.lookUp}</strong>{t.lookUpCopy}</p></div>
+    <div className="lens-result-heading"><LandmarkPreview landmarkId={landmarkId} compact /><div><p className="eyebrow">{t.lookingAt}</p><h2 id="lens-result-title">{landmark.name}</h2>{landmark.location ? <p className="landmark-location">{landmark.location}</p> : null}</div></div>
+    <div className="lens-story primary-story"><p className="eyebrow">{t.oneThing}</p><p>{landmark.narratives[narrative]}</p></div>
+    <div className="look-up-card"><span>↗</span><p><strong>{t.lookUp}</strong>{landmark.lookUp}</p></div>
     <div className="lens-modes" aria-label={t.oneThing}>{t.lensModes.map((mode) => <button type="button" key={mode.id} className={narrative === mode.id ? "active" : ""} aria-pressed={narrative === mode.id} onClick={() => onNarrative(mode.id)}>{mode.label}</button>)}</div>
   </section>;
 }
 
-function LensScreen({ t, state, narrative, onCapture, onNarrative }: { t: UiCopy; state: LensState; narrative: LensNarrative; onCapture: () => void; onNarrative: (narrative: LensNarrative) => void }) {
+function LensNotFound({ locale, t, onReset }: { locale: Locale; t: UiCopy; onReset: () => void }) {
+  return <section className="app-screen lens-not-found" aria-labelledby="not-found-title">
+    <div className="not-found-mark">?</div>
+    <p className="eyebrow">{t.notFoundEyebrow}</p>
+    <h2 id="not-found-title">{t.notFoundTitle}</h2>
+    <p>{t.notFoundCopy}</p>
+    <ul>{Object.values(landmarks).map((landmark) => <li key={landmark.id}>{landmark.content[locale].name}</li>)}</ul>
+    <button type="button" onClick={onReset}>{t.tryAnother}</button>
+  </section>;
+}
+
+function LensScreen({ locale, t, state, selectedLandmark, narrative, onCapture, onLookup, onNarrative, onReset }: { locale: Locale; t: UiCopy; state: LensState; selectedLandmark: LandmarkId | null; narrative: LandmarkNarrative; onCapture: () => void; onLookup: (query: string) => void; onNarrative: (narrative: LandmarkNarrative) => void; onReset: () => void }) {
   const [placeName, setPlaceName] = useState("");
 
-  if (state === "result") return <LensResult t={t} narrative={narrative} onNarrative={onNarrative} />;
+  if (state === "result" && selectedLandmark) return <LensResult locale={locale} landmarkId={selectedLandmark} t={t} narrative={narrative} onNarrative={onNarrative} />;
+  if (state === "notFound") return <LensNotFound locale={locale} t={t} onReset={onReset} />;
 
   return <section className="app-screen lens-screen" aria-labelledby="lens-title">
     <div className="screen-intro"><p className="eyebrow">{t.lensEyebrow}</p><h2 id="lens-title">{t.lensTitle}</h2><p>{t.lensQuestion}</p></div>
     <p className="lens-intro">{t.lensIntro}</p>
     <div className={`lens-capture ${state === "scanning" ? "scanning" : ""}`}>
-      <CathedralPreview />
+      <LandmarkPreview landmarkId="sevilleCathedral" />
       <span className="focus-corner corner-one" /><span className="focus-corner corner-two" /><span className="focus-corner corner-three" /><span className="focus-corner corner-four" />
       {state === "scanning" ? <div className="recognition-state" role="status"><span /><strong>{t.scanning}</strong><p>{t.scanningHint}</p></div> : null}
     </div>
     <p className="lens-promise">{t.lensPromise}</p>
     <button className="capture-action" type="button" onClick={onCapture} disabled={state === "scanning"}><Icon name="camera" /> {t.capture}</button>
-    <form className="place-lookup" onSubmit={(event) => { event.preventDefault(); onCapture(); }}>
+    <form className="place-lookup" onSubmit={(event) => { event.preventDefault(); onLookup(placeName); }}>
       <label><span className="sr-only">{t.placeInputLabel}</span><input value={placeName} onChange={(event) => setPlaceName(event.target.value)} placeholder={t.placeInputPlaceholder} /></label>
-      <button type="submit" disabled={state === "scanning"}>{t.placeLookup}</button>
+      <button type="submit" disabled={state === "scanning" || !placeName.trim()}>{t.placeLookup}</button>
     </form>
+    <p className="place-example">{t.placeInputExample}</p>
   </section>;
 }
 
@@ -437,7 +446,8 @@ export default function Home() {
   const [accepted, setAccepted] = useState(false);
   const [nearbyChoice, setNearbyChoice] = useState<string | null>(null);
   const [lensState, setLensState] = useState<LensState>("idle");
-  const [lensNarrative, setLensNarrative] = useState<LensNarrative>("short");
+  const [selectedLandmark, setSelectedLandmark] = useState<LandmarkId | null>(null);
+  const [lensNarrative, setLensNarrative] = useState<LandmarkNarrative>("short");
   const timers = useRef<number[]>([]);
   const t = uiCopy[locale];
 
@@ -480,17 +490,33 @@ export default function Home() {
 
   const startLensRecognition = () => {
     if (lensState === "scanning") return;
+    setSelectedLandmark("sevilleCathedral");
     setLensState("scanning");
     setLensNarrative("short");
     schedule(() => setLensState("result"), 820);
+  };
+
+  const lookUpLandmark = (query: string) => {
+    const match = findLandmark(query);
+    setLensNarrative("short");
+    setSelectedLandmark(match?.id ?? null);
+    setLensState(match ? "result" : "notFound");
+  };
+
+  const resetLens = () => {
+    timers.current.forEach(window.clearTimeout);
+    timers.current = [];
+    setSelectedLandmark(null);
+    setLensState("idle");
+    setLensNarrative("short");
   };
 
   const goBack = () => {
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
     if (activeTab === "lens") {
-      setLensState("idle");
-      setLensNarrative("short");
+      setSelectedLandmark(null);
+      setLensState("idle"); setLensNarrative("short");
       return;
     }
     setScreen(screen === "plan" ? "context" : "live");
@@ -511,7 +537,7 @@ export default function Home() {
           {activeTab === "trip" && screen === "context" ? <ContextInput t={t} note={note} constraint={constraint} processing={processing} onNoteChange={setNote} onConstraint={(value) => setConstraint((current) => current === value ? null : value)} onSubmit={() => createPlan(true)} onSkip={() => createPlan(false)} /> : null}
           {activeTab === "trip" && screen === "plan" ? <RecoveryPlanView locale={locale} t={t} variant={variant} flowing={flowing} accepted={accepted} onLessWalking={() => steer("less")} onMoreActive={() => steer("active")} onAccept={() => setAccepted(true)} onReplay={replay} onOpenNearby={() => setActiveTab("nearby")} /> : null}
           {activeTab === "nearby" ? <NearbyScreen t={t} selected={nearbyChoice} onSelect={setNearbyChoice} /> : null}
-          {activeTab === "lens" ? <LensScreen t={t} state={lensState} narrative={lensNarrative} onCapture={startLensRecognition} onNarrative={setLensNarrative} /> : null}
+          {activeTab === "lens" ? <LensScreen locale={locale} t={t} state={lensState} selectedLandmark={selectedLandmark} narrative={lensNarrative} onCapture={startLensRecognition} onLookup={lookUpLandmark} onNarrative={setLensNarrative} onReset={resetLens} /> : null}
           <BottomNavigation activeTab={activeTab} t={t} onChange={setActiveTab} />
         </div>
       </div>
