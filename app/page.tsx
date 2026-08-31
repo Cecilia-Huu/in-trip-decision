@@ -219,6 +219,128 @@ const uiCopy = {
 
 type UiCopy = (typeof uiCopy)[Locale];
 
+const caseCopy = {
+  zh: {
+    eyebrow: "AI PRODUCT CASE · IN-TRIP DECISION",
+    title: "旅行计划最容易失效的，往往不是出发前，而是已经在路上以后。",
+    scene: ["16:00 · 塞维利亚王宫临时关闭", "突然多出 2 小时 15 分", "18:30 · 晚餐已预订，不能动"],
+    setup: "传统工具会让我重新搜索“附近还有什么”。但我真正需要解决的是：结合我现在的状态，接下来怎么走更合适？",
+    proposition: "不是找最好的地点，而是决定此刻最合适的下一步。",
+    tryLabel: "现在，直接试试这个产品",
+    sections: {
+      problem: {
+        kicker: "01 / Problem",
+        title: "计划被打乱不是问题，重新做决定才是。",
+        body: "一个节点失效后，用户面对的不只是重新搜索。旅行时间有限，“明天再去”很多时候并不存在。",
+        costs: ["搜索成本", "比较成本", "后悔成本"],
+        flow: ["Original Plan", "Change", "2h15 Open Gap", "18:30 Next Anchor"],
+        conclusion: "问题不是重新生成整份 itinerary，而是修复“现在 → 下一个固定安排”之间的 Gap。",
+      },
+      insight: {
+        kicker: "02 / Insight",
+        title: "信息很多，真正缺的是行动判断。",
+        rows: [
+          ["搜索 / 地图", "Facts", "告诉我客观世界是什么。"],
+          ["UGC", "Experience", "告诉我相似的人曾经怎么经历它。"],
+          ["AI", "Decision", "判断这些信息放到此刻的我身上，下一步应该怎么行动。"],
+        ],
+        conclusion: "机会不在于提供更多信息，而在于让信息真正变成行动。",
+      },
+      logic: {
+        kicker: "03 / Decision Logic",
+        title: "真正的推荐对象不是地点，而是地点 × 此刻的我。",
+        formula: "Next Move = Place × Me × Now",
+        dimensions: [
+          ["Place", "营业、距离、方向、固定行程等现实约束。"],
+          ["Me", "solo、节奏、兴趣与风险偏好等稳定倾向。"],
+          ["Now", "时间、疲劳、情绪与临时变化。"],
+        ],
+        scenarios: [
+          ["A · 有点累", "不想再去一个大景点", "Café + 低强度散步 + 保留晚餐"],
+          ["B · 还很有精神", "想继续逛", "小型展馆 + 城市漫步 + 保留晚餐"],
+        ],
+        conclusion: "现实世界没变，但“现在的我”变了，下一步就不应该一样。",
+      },
+      interaction: {
+        kicker: "04 / Interaction",
+        title: "AI 的目标不是延长对话，而是让用户更快放下手机。",
+        body: "旅行是强线下场景：用户可能正在走路、看路、拿行李、晒太阳，网络也不一定稳定。",
+        principles: ["Low input", "Low interaction cost", "Low decision load"],
+        fallbackTitle: "Graceful Degradation",
+        fallback: "即使用户什么都不选，系统仍能根据时间、失效节点、下一个 Anchor 与候选活动给出保守方案。好的 AI 产品不要求完美 Context，而是在信息不完整时先工作，再让用户用最低成本纠偏。",
+      },
+      lens: {
+        kicker: "05 / Another In-trip Moment",
+        title: "不用提前做功课，走到哪儿，懂到哪儿。",
+        body: "当旅行者已经站在一个景点前，真正的问题不是“给我更多百科”，而是“此刻刚好够用的信息是什么？”",
+        rows: [["传统 Audio Guide", "Place → Fixed Content"], ["AI Guide", "Place × Me × Now → What is worth knowing here"]],
+        depth: ["只有 30 秒 → 快速讲完", "愿意停留一会儿 → 听一个故事", "想深入理解 → 展开三个重点"],
+      },
+      scope: {
+        kicker: "Prototype Scope",
+        title: "验证交互假设，而不是模拟完整旅行平台。",
+        items: ["Context-aware Replan 是否优于普通 POI replacement", "低输入 interaction 是否适合 In-trip 场景", "不同用户状态是否产生不同 Next Move", "不同注意力投入是否应该改变讲解深度"],
+        note: "当前使用 Mock itinerary、Mock POI 与 Mock landmark data；Nearby 只作为“顺路 > 最近”的空间支撑层。",
+      },
+    },
+  },
+  en: {
+    eyebrow: "AI PRODUCT CASE · IN-TRIP DECISION",
+    title: "Travel plans often fail after the trip has already begun—not before it.",
+    scene: ["16:00 · Royal Alcázar closes unexpectedly", "A 2 hr 15 min gap appears", "18:30 · Dinner is reserved and fixed"],
+    setup: "Traditional tools send me back to search: “What else is nearby?” The real question is: given how I feel now, what is the right next move?",
+    proposition: "Not the best place. The best next move.",
+    tryLabel: "Try the product now",
+    sections: {
+      problem: {
+        kicker: "01 / Problem",
+        title: "The disruption is not the problem. Deciding again is.",
+        body: "When one stop fails, the traveller is not merely searching again. Time is scarce, and “tomorrow” often does not exist on a trip.",
+        costs: ["Search cost", "Comparison cost", "Regret risk"],
+        flow: ["Original Plan", "Change", "2h15 Open Gap", "18:30 Next Anchor"],
+        conclusion: "The job is not to regenerate the itinerary. It is to repair the gap between now and the next fixed anchor.",
+      },
+      insight: {
+        kicker: "02 / Insight",
+        title: "There is plenty of information. The missing layer is action.",
+        rows: [["Search / Maps", "Facts", "Tell me what is objectively possible."], ["UGC", "Experience", "Shows how similar people experienced it."], ["AI", "Decision", "Judges what fits this person in this moment."]],
+        conclusion: "The opportunity is not more information. It is better action.",
+      },
+      logic: {
+        kicker: "03 / Decision Logic",
+        title: "The recommendation is not a place. It is a place for this person, now.",
+        formula: "Next Move = Place × Me × Now",
+        dimensions: [["Place", "Opening hours, distance, direction, and fixed plans."], ["Me", "Solo travel, pace, interests, and risk preference."], ["Now", "Time, energy, emotion, and the disruption itself."]],
+        scenarios: [["A · A little tired", "No more major sights", "Café + easy walk + keep dinner"], ["B · Still energised", "Wants to keep exploring", "Small gallery + city walk + keep dinner"]],
+        conclusion: "The world did not change. Me + Now did, so the next move should change too.",
+      },
+      interaction: {
+        kicker: "04 / Interaction",
+        title: "The goal is not more conversation. It is helping travellers put the phone away.",
+        body: "Travel is intensely physical: people are walking, navigating, carrying bags, talking, and often dealing with weak connectivity.",
+        principles: ["Low input", "Low interaction cost", "Low decision load"],
+        fallbackTitle: "Graceful Degradation",
+        fallback: "Even with no user input, the product can use time, the failed stop, the next anchor, and candidate activities to offer a conservative plan. Good AI works with incomplete context, then makes correction cheap.",
+      },
+      lens: {
+        kicker: "05 / Another In-trip Moment",
+        title: "Skip the homework. Understand what is in front of you.",
+        body: "When a traveller is already standing at a landmark, the question is not “give me more facts.” It is “what is just enough to know right now?”",
+        rows: [["Traditional Audio Guide", "Place → Fixed Content"], ["AI Guide", "Place × Me × Now → What is worth knowing here"]],
+        depth: ["Only 30 seconds → quick version", "A few minutes → one memorable story", "Ready to go deeper → three focused themes"],
+      },
+      scope: {
+        kicker: "Prototype Scope",
+        title: "Test the interaction hypothesis—not simulate a travel platform.",
+        items: ["Whether context-aware replan beats POI replacement", "Whether low-input interaction fits in-trip use", "Whether different states produce different next moves", "Whether attention should change explanation depth"],
+        note: "The prototype uses mocked itinerary, POI, and landmark data. Nearby remains a supporting spatial layer built around on-the-way > nearest.",
+      },
+    },
+  },
+} as const;
+
+type CaseCopy = (typeof caseCopy)[Locale];
+
 function getInitialLocale(): Locale {
   try {
     return window.localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "zh";
@@ -436,6 +558,67 @@ function LensScreen({ locale, t, state, selectedLandmark, narrative, onCapture, 
   </section>;
 }
 
+function CaseIntro({ copy, locale, languageLabel, onLocaleChange }: { copy: CaseCopy; locale: Locale; languageLabel: string; onLocaleChange: (locale: Locale) => void }) {
+  return <header className="case-intro">
+    <div className="case-topline"><p>{copy.eyebrow}</p><LanguageToggle locale={locale} label={languageLabel} onChange={onLocaleChange} /></div>
+    <h1>{copy.title}</h1>
+    <ol className="case-scene">{copy.scene.map((item, index) => <li key={item}><span>{item}</span>{index < copy.scene.length - 1 ? <i>↓</i> : null}</li>)}</ol>
+    <p className="case-setup">{copy.setup}</p>
+    <p className="case-proposition">{copy.proposition}</p>
+  </header>;
+}
+
+function SectionHeading({ kicker, title }: { kicker: string; title: string }) {
+  return <><p className="case-kicker">{kicker}</p><h2>{title}</h2></>;
+}
+
+function CaseDetails({ copy }: { copy: CaseCopy }) {
+  const { problem, insight, logic, interaction, lens, scope } = copy.sections;
+  return <div className="case-details">
+    <article className="case-section">
+      <SectionHeading kicker={problem.kicker} title={problem.title} />
+      <p>{problem.body}</p>
+      <div className="cost-line">{problem.costs.map((cost, index) => <span key={cost}>{cost}{index < problem.costs.length - 1 ? <i>+</i> : null}</span>)}</div>
+      <div className="gap-flow">{problem.flow.map((step, index) => <span key={step}>{step}{index < problem.flow.length - 1 ? <i>→</i> : null}</span>)}</div>
+      <p className="case-conclusion">{problem.conclusion}</p>
+    </article>
+
+    <article className="case-section">
+      <SectionHeading kicker={insight.kicker} title={insight.title} />
+      <div className="insight-rows">{insight.rows.map(([source, layer, description]) => <div key={layer}><span>{source}</span><strong>{layer}</strong><p>{description}</p></div>)}</div>
+      <p className="case-conclusion">{insight.conclusion}</p>
+    </article>
+
+    <article className="case-section">
+      <SectionHeading kicker={logic.kicker} title={logic.title} />
+      <p className="logic-formula">{logic.formula}</p>
+      <dl className="logic-dimensions">{logic.dimensions.map(([term, definition]) => <div key={term}><dt>{term}</dt><dd>{definition}</dd></div>)}</dl>
+      <div className="scenario-compare">{logic.scenarios.map(([name, state, move]) => <section key={name}><strong>{name}</strong><p>{state}</p><span>→</span><b>{move}</b></section>)}</div>
+      <p className="case-conclusion">{logic.conclusion}</p>
+    </article>
+
+    <article className="case-section">
+      <SectionHeading kicker={interaction.kicker} title={interaction.title} />
+      <p>{interaction.body}</p>
+      <div className="interaction-principles">{interaction.principles.map((principle) => <span key={principle}>{principle}</span>)}</div>
+      <div className="fallback-note-case"><strong>{interaction.fallbackTitle}</strong><p>{interaction.fallback}</p></div>
+    </article>
+
+    <article className="case-section">
+      <SectionHeading kicker={lens.kicker} title={lens.title} />
+      <p>{lens.body}</p>
+      <div className="guide-logic">{lens.rows.map(([label, value]) => <p key={label}><span>{label}</span><strong>{value}</strong></p>)}</div>
+      <ul className="depth-list">{lens.depth.map((item) => <li key={item}>{item}</li>)}</ul>
+    </article>
+
+    <article className="case-section scope-section">
+      <SectionHeading kicker={scope.kicker} title={scope.title} />
+      <ol>{scope.items.map((item) => <li key={item}>{item}</li>)}</ol>
+      <p>{scope.note}</p>
+    </article>
+  </div>;
+}
+
 export default function Home() {
   const [locale, setLocale] = useState<Locale>(getInitialLocale);
   const [activeTab, setActiveTab] = useState<AppTab>("trip");
@@ -452,6 +635,7 @@ export default function Home() {
   const [lensNarrative, setLensNarrative] = useState<LandmarkNarrative>("short");
   const timers = useRef<number[]>([]);
   const t = uiCopy[locale];
+  const c = caseCopy[locale];
 
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
 
@@ -527,8 +711,11 @@ export default function Home() {
 
   const showBack = activeTab === "trip" ? screen !== "live" : activeTab === "lens" && lensState !== "idle";
 
-  return <main className="app-page" data-locale={locale}>
-    <section className="app-shell" aria-label={t.appName}>
+  return <main className="case-page" data-locale={locale}>
+    <CaseIntro copy={c} locale={locale} languageLabel={t.language} onLocaleChange={setLocale} />
+    <section className="prototype-stage" aria-label={c.tryLabel}>
+      <p className="prototype-label">{c.tryLabel} <span>↓</span></p>
+      <div className="app-shell" aria-label={t.appName}>
         <div className="product-surface">
           <ProductHeader showBack={showBack} locale={locale} t={t} onBack={goBack} onLocaleChange={setLocale} />
           {activeTab === "trip" && screen === "live" ? <LiveItinerary locale={locale} t={t} onRepair={() => setScreen("context")} /> : null}
@@ -538,6 +725,8 @@ export default function Home() {
           {activeTab === "lens" ? <LensScreen locale={locale} t={t} state={lensState} selectedLandmark={selectedLandmark} narrative={lensNarrative} onCapture={startLensRecognition} onLookup={lookUpLandmark} onNarrative={setLensNarrative} onReset={resetLens} /> : null}
           <BottomNavigation activeTab={activeTab} t={t} onChange={setActiveTab} />
         </div>
+      </div>
     </section>
+    <CaseDetails copy={c} />
   </main>;
 }

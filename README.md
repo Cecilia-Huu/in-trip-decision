@@ -1,6 +1,6 @@
 # In-trip Decision · Gap Recovery
 
-A mobile-first travel companion for recovering the next part of a trip when plans change. When one itinerary stop becomes impossible, it repairs only the gap before the next fixed anchor.
+An AI product case study with a live, mobile-first travel prototype. When one itinerary stop becomes impossible, the product repairs only the gap before the next fixed anchor.
 
 The public demo uses a self-consistent mocked Seville context and client-side state orchestration. It demonstrates the interaction model without pretending to be a live AI or mapping service.
 
