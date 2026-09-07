@@ -1,11 +1,11 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { createMapLinks, localDecisionEngine, type CurrentState, type DecisionContext, type DecisionResult } from "./decision-engine";
+import { createMapLinks, extractContextFromText, localDecisionEngine, parseSteeringText, type CurrentState, type DecisionContext, type DecisionResult, type DecisionStep } from "./decision-engine";
 import { findLandmark, landmarks, type LandmarkId, type LandmarkNarrative, type Locale } from "./mock-data";
 
 type AppTab = "decision" | "lens";
 type DecisionScreen = "form" | "result";
 type LensState = "idle" | "result" | "notFound";
-type IconName = "arrow" | "check" | "compass" | "lens" | "lock" | "map" | "spark";
+type IconName = "arrow" | "check" | "compass" | "lens" | "lock" | "spark";
 
 const LANGUAGE_KEY = "in-trip-decision-locale";
 
@@ -13,37 +13,37 @@ const copy = {
   zh: {
     appName: "In-trip Decision", language: "切换语言", back: "返回", navLabel: "主导航",
     nav: [{ id: "decision" as const, label: "下一步" }, { id: "lens" as const, label: "识景 Beta" }],
-    headline: "接下来呢？", intro: "计划变了，或者只是现在不想照原计划走，都可以从下一步开始。",
+    headline: "旅途决策", intro: "说说现在的情况。",
     changeLabel: "发生什么了？", changePlaceholder: "比如：博物馆关了。",
     changeChips: ["原计划去不了了", "临时多出时间", "现在有点累", "不想继续原计划"],
     placeLabel: "你现在大概在哪？", placePlaceholder: "例如：米兰大教堂",
-    anchorLabel: "接下来有不能错过的安排吗？", anchorOptional: "可选", anchorNone: "没有固定安排", anchorTime: "时间", anchorTimePlaceholder: "19:00", anchorPlace: "地点 / 安排名称", anchorPlacePlaceholder: "例如：Navigli 晚餐",
+    anchorLabel: "接下来有固定安排吗？", anchorOptional: "可选", anchorNone: "没有固定安排", anchorAdd: "添加固定安排", anchorRemove: "移除固定安排", anchorTime: "时间", anchorTimePlaceholder: "19:00", anchorPlace: "地点 / 安排名称", anchorPlacePlaceholder: "例如：Navigli 晚餐",
     stateLabel: "现在呢？", stateOptional: "可以不选",
     states: [{ id: "tired" as const, label: "有点累" }, { id: "lessWalking" as const, label: "不想走太远" }, { id: "explore" as const, label: "还想继续逛" }, { id: "spontaneous" as const, label: "想随性一点" }],
-    submit: "决定下一步", requiredChange: "先告诉我发生了什么。", requiredPlace: "还需要一个大概位置。", incompleteAnchor: "固定安排的时间和名称需要一起填写。",
-    resultEyebrow: "最推荐", why: "为什么这样安排？", evidence: "这次优先考虑", steer: "想换个方向？",
-    steerOptions: [{ id: "lessWalking" as const, label: "少走一点" }, { id: "explore" as const, label: "还想多逛" }, { id: "spontaneous" as const, label: "更随性一点" }],
-    mapAction: "在地图里找", mapTitle: "用哪个地图打开？", mapCopy: "地图会搜索：", mapClose: "关闭", edit: "修改刚才的信息",
+    submit: "决定下一步", continue: "继续", requiredChange: "先告诉我发生了什么。", requiredPlace: "还需要一个大概位置。", incompleteAnchor: "固定安排的时间和名称需要一起填写。",
+    resultEyebrow: "Decision", why: "为什么这样建议？", evidence: "依据", steer: "想调整一下？",
+    steerOptions: [{ id: "lessWalking" as const, label: "少走一点" }, { id: "explore" as const, label: "我还想逛" }, { id: "spontaneous" as const, label: "换个感觉" }],
+    steerPlaceholder: "或者直接说一句……", steerSubmit: "调整", mapTitle: "用哪个地图打开？", mapCopy: "这一步会交给地图：", mapClose: "关闭", edit: "修改刚才的信息",
     lensTitle: "识景 Beta", lensIntro: "输入眼前的景点名称，先听刚好够用的那一段。", lensLimit: "Beta 当前支持有限地点", lensLabel: "景点名称", lensPlaceholder: "例如：米兰大教堂", lensSubmit: "讲给我听", lensTry: "当前支持",
     lookingAt: "你正在看", oneThing: "先知道这一件事就够了", lookUp: "抬头找找 👀",
     modes: [{ id: "short" as const, label: "30 秒讲完" }, { id: "story" as const, label: "讲个有意思的故事" }, { id: "detail" as const, label: "详细一点" }],
     another: "换一个景点", notFound: "这个地点目前还没有收录", notFoundCopy: "Beta 当前支持米兰大教堂、塞维利亚大教堂和圣家堂。",
-    pageTitle: "In-trip Decision · 接下来呢？", pageDescription: "旅行正在进行时，只决定接下来 1–3 小时怎么过。",
+    pageTitle: "In-trip Decision · 旅途决策", pageDescription: "旅行正在进行时，只决定接下来 1–3 小时怎么过。",
   },
   en: {
     appName: "In-trip Decision", language: "Switch language", back: "Back", navLabel: "Main navigation",
     nav: [{ id: "decision" as const, label: "Next move" }, { id: "lens" as const, label: "Lens Beta" }],
-    headline: "What’s next?", intro: "Plans changed—or you simply do not feel like following them. Start with the next move.",
+    headline: "Trip decision", intro: "Tell me what is happening now.",
     changeLabel: "What changed?", changePlaceholder: "For example: The museum is closed.",
     changeChips: ["Original plan fell through", "Unexpected free time", "I feel tired", "I want a different plan"],
     placeLabel: "Roughly where are you?", placePlaceholder: "For example: Milan Cathedral",
-    anchorLabel: "Anything you cannot miss next?", anchorOptional: "Optional", anchorNone: "No fixed plan", anchorTime: "Time", anchorTimePlaceholder: "19:00", anchorPlace: "Place / plan", anchorPlacePlaceholder: "For example: Dinner in Navigli",
+    anchorLabel: "Any fixed plan next?", anchorOptional: "Optional", anchorNone: "No fixed plan", anchorAdd: "Add a fixed plan", anchorRemove: "Remove fixed plan", anchorTime: "Time", anchorTimePlaceholder: "19:00", anchorPlace: "Place / plan", anchorPlacePlaceholder: "For example: Dinner in Navigli",
     stateLabel: "How are you now?", stateOptional: "Optional",
     states: [{ id: "tired" as const, label: "A little tired" }, { id: "lessWalking" as const, label: "Less walking" }, { id: "explore" as const, label: "Still want to explore" }, { id: "spontaneous" as const, label: "Keep it spontaneous" }],
-    submit: "Decide what’s next", requiredChange: "Tell me what changed first.", requiredPlace: "Add your rough location.", incompleteAnchor: "Add both the time and name of the fixed plan.",
-    resultEyebrow: "BEST NEXT MOVE", why: "Why this decision?", evidence: "Prioritised this time", steer: "Want a different direction?",
-    steerOptions: [{ id: "lessWalking" as const, label: "Less walking" }, { id: "explore" as const, label: "More active" }, { id: "spontaneous" as const, label: "More spontaneous" }],
-    mapAction: "Find it in Maps", mapTitle: "Open with", mapCopy: "Maps will search for:", mapClose: "Close", edit: "Edit context",
+    submit: "Decide what’s next", continue: "Continue", requiredChange: "Tell me what changed first.", requiredPlace: "Add your rough location.", incompleteAnchor: "Add both the time and name of the fixed plan.",
+    resultEyebrow: "Decision", why: "Why this suggestion?", evidence: "Based on", steer: "Adjust this?",
+    steerOptions: [{ id: "lessWalking" as const, label: "Less walking" }, { id: "explore" as const, label: "I want to explore" }, { id: "spontaneous" as const, label: "Change the feel" }],
+    steerPlaceholder: "Or say it in one sentence…", steerSubmit: "Adjust", mapTitle: "Open with", mapCopy: "Maps will handle this step:", mapClose: "Close", edit: "Edit context",
     lensTitle: "Lens Beta", lensIntro: "Enter the landmark in front of you for an explanation that is just long enough.", lensLimit: "Beta currently supports a limited set of places", lensLabel: "Landmark name", lensPlaceholder: "For example: Milan Cathedral", lensSubmit: "Tell me about it", lensTry: "Currently supported",
     lookingAt: "You’re looking at", oneThing: "One thing worth knowing", lookUp: "Look up 👀",
     modes: [{ id: "short" as const, label: "30-second version" }, { id: "story" as const, label: "Tell me a story" }, { id: "detail" as const, label: "A little more detail" }],
@@ -63,7 +63,6 @@ function Icon({ name }: { name: IconName }) {
     compass: <><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5Z" /></>,
     lens: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></>,
     lock: <><rect width="16" height="12" x="4" y="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
-    map: <><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z" /><path d="M9 3v15M15 6v15" /></>,
     spark: <><path d="m12 3-1.7 4.3L6 9l4.3 1.7L12 15l1.7-4.3L18 9l-4.3-1.7Z" /><path d="m5 15-.8 2.2L2 18l2.2.8L5 21l.8-2.2L8 18l-2.2-.8Z" /></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
@@ -84,27 +83,39 @@ function DecisionForm({ locale, initialContext, onDecide }: { locale: Locale; in
   const [currentPlace, setCurrentPlace] = useState(initialContext?.currentPlace ?? "");
   const [anchorTime, setAnchorTime] = useState(initialContext?.nextAnchor?.time ?? "");
   const [anchorPlace, setAnchorPlace] = useState(initialContext?.nextAnchor?.place ?? "");
-  const [noAnchor, setNoAnchor] = useState(initialContext ? initialContext.nextAnchor === null : false);
+  const [noAnchor, setNoAnchor] = useState(initialContext?.nextAnchor ? false : true);
+  const [anchorTouched, setAnchorTouched] = useState(Boolean(initialContext));
   const [states, setStates] = useState<CurrentState[]>(initialContext?.currentState ?? []);
   const [error, setError] = useState("");
+  const [clarifying, setClarifying] = useState(false);
 
   const toggleState = (state: CurrentState) => setStates((current) => current.includes(state) ? [] : [state]);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const trimmedChange = change.trim();
-    const trimmedPlace = currentPlace.trim();
     if (!trimmedChange) return setError(t.requiredChange);
-    if (!trimmedPlace) return setError(t.requiredPlace);
+    const parsed = extractContextFromText(trimmedChange, locale);
+    const trimmedPlace = currentPlace.trim() || parsed.currentPlace || "";
+    if (!trimmedPlace) { setError(""); setClarifying(true); return; }
     if (!noAnchor && Boolean(anchorTime.trim()) !== Boolean(anchorPlace.trim())) return setError(t.incompleteAnchor);
+    const parsedAnchor = !anchorTouched ? parsed.nextAnchor : undefined;
+    const nextAnchor = parsedAnchor ?? (!noAnchor && anchorTime.trim() && anchorPlace.trim() ? { time: anchorTime.trim(), place: anchorPlace.trim() } : null);
+    const currentState = states.length ? states : parsed.currentState ? [parsed.currentState] : [];
     setError("");
-    onDecide({ change: trimmedChange, currentPlace: trimmedPlace, currentTime: new Date().toISOString(), nextAnchor: !noAnchor && anchorTime.trim() && anchorPlace.trim() ? { time: anchorTime.trim(), place: anchorPlace.trim() } : null, currentState: states, preferences: {} });
+    onDecide({ change: trimmedChange, currentPlace: trimmedPlace, currentTime: new Date().toISOString(), nextAnchor, currentState, preferences: {} });
   };
 
+  if (clarifying) return <form className="clarifier app-screen" onSubmit={submit} noValidate>
+    <span className="clarifier-mark"><Icon name="compass" /></span><h1>{t.placeLabel}</h1><p>{locale === "zh" ? "只补这一项，就可以继续。" : "Just this one detail, then we can continue."}</p>
+    <label><span>{t.placeLabel}</span><input value={currentPlace} onChange={(event) => setCurrentPlace(event.target.value)} placeholder={t.placePlaceholder} /></label>
+    {error ? <p className="form-error" role="alert">{error}</p> : null}<button className="primary-action" type="submit">{t.continue}<Icon name="arrow" /></button>
+  </form>;
+
   return <form className="decision-form app-screen" onSubmit={submit} noValidate>
-    <section className="hero-copy"><p className="eyebrow">NEXT MOVE</p><h1>{t.headline}</h1><p>{t.intro}</p></section>
+    <section className="hero-copy"><h1>{t.headline}</h1><p>{t.intro}</p></section>
     <fieldset className="form-section"><legend>{t.changeLabel}</legend><textarea value={change} onChange={(event) => setChange(event.target.value)} placeholder={t.changePlaceholder} rows={3} /><div className="chip-row">{t.changeChips.map((chip) => <button type="button" key={chip} className={change === chip ? "selected" : ""} onClick={() => setChange(chip)}>{chip}</button>)}</div></fieldset>
     <label className="form-section"><strong>{t.placeLabel}</strong><input value={currentPlace} onChange={(event) => setCurrentPlace(event.target.value)} placeholder={t.placePlaceholder} /></label>
-    <fieldset className="form-section anchor-section"><legend>{t.anchorLabel} <span>{t.anchorOptional}</span></legend><button type="button" className={`no-anchor-toggle ${noAnchor ? "selected" : ""}`} aria-pressed={noAnchor} onClick={() => setNoAnchor((current) => !current)}><span>{noAnchor ? <Icon name="check" /> : null}</span>{t.anchorNone}</button>{!noAnchor ? <div className="anchor-fields"><label><span>{t.anchorTime}</span><input inputMode="numeric" value={anchorTime} onChange={(event) => setAnchorTime(event.target.value)} placeholder={t.anchorTimePlaceholder} /></label><label><span>{t.anchorPlace}</span><input value={anchorPlace} onChange={(event) => setAnchorPlace(event.target.value)} placeholder={t.anchorPlacePlaceholder} /></label></div> : null}</fieldset>
+    <fieldset className="form-section anchor-section"><legend>{t.anchorLabel} <span>{t.anchorOptional}</span></legend>{noAnchor ? <div className="anchor-collapsed"><span><Icon name="check" />{t.anchorNone}</span><button type="button" onClick={() => { setNoAnchor(false); setAnchorTouched(true); }}>{`+ ${t.anchorAdd}`}</button></div> : <><div className="anchor-fields"><label><span>{t.anchorTime}</span><input inputMode="numeric" value={anchorTime} onChange={(event) => setAnchorTime(event.target.value)} placeholder={t.anchorTimePlaceholder} /></label><label><span>{t.anchorPlace}</span><input value={anchorPlace} onChange={(event) => setAnchorPlace(event.target.value)} placeholder={t.anchorPlacePlaceholder} /></label></div><button className="remove-anchor" type="button" onClick={() => { setNoAnchor(true); setAnchorTouched(true); setAnchorTime(""); setAnchorPlace(""); }}>{t.anchorRemove}</button></>}</fieldset>
     <fieldset className="form-section"><legend>{t.stateLabel} <span>{t.stateOptional}</span></legend><div className="chip-row state-chips">{t.states.map((state) => <button type="button" key={state.id} className={states.includes(state.id) ? "selected" : ""} aria-pressed={states.includes(state.id)} onClick={() => toggleState(state.id)}>{state.label}</button>)}</div></fieldset>
     {error ? <p className="form-error" role="alert">{error}</p> : null}<button className="primary-action" type="submit">{t.submit}<Icon name="arrow" /></button>
   </form>;
@@ -112,16 +123,18 @@ function DecisionForm({ locale, initialContext, onDecide }: { locale: Locale; in
 
 function DecisionView({ locale, context, result, onSteer, onEdit }: { locale: Locale; context: DecisionContext; result: DecisionResult; onSteer: (state: CurrentState) => void; onEdit: () => void }) {
   const t = copy[locale];
-  const [mapsOpen, setMapsOpen] = useState(false);
-  const mapLinks = createMapLinks(result.mapQuery);
+  const [mapAction, setMapAction] = useState<NonNullable<DecisionStep["map"]> | null>(null);
+  const [steerText, setSteerText] = useState("");
+  const mapLinks = mapAction ? createMapLinks(mapAction.query, mapAction.mode) : [];
+  const submitSteer = (event: FormEvent) => { event.preventDefault(); if (!steerText.trim()) return; onSteer(parseSteeringText(steerText)); };
   return <section className="decision-result app-screen" aria-live="polite">
     <div className="result-heading"><div><p className="eyebrow">{t.resultEyebrow}</p><h1>{result.title}</h1></div>{context.nextAnchor ? <span className="anchor-badge"><Icon name="lock" />{context.nextAnchor.time}</span> : null}</div>
     <p className="result-summary">{result.summary}</p><p className="horizon">{result.horizon}</p>
-    <ol className="strategy-timeline">{result.steps.map((step, index) => <li key={`${result.strategy}-${index}`} className={step.anchor ? "anchor" : ""}><span className="timeline-dot">{step.anchor ? <Icon name="lock" /> : null}</span><div><small>{step.label}</small><strong>{step.title}</strong><p>{step.detail}</p></div></li>)}</ol>
+    <ol className="strategy-timeline">{result.steps.map((step, index) => <li key={`${result.strategy}-${index}`} className={step.anchor ? "anchor" : index === 0 ? "current" : ""}><span className="timeline-dot">{step.anchor ? <Icon name="lock" /> : null}</span><div><small>{step.label}</small><strong>{step.title}</strong><p>{step.detail}</p>{step.map ? <button className="step-map-action" type="button" onClick={() => setMapAction(step.map!)}>{step.map.label}<Icon name="arrow" /></button> : null}</div></li>)}</ol>
     <section className="why-card"><span><Icon name="spark" /></span><div><h2>{t.why}</h2><p>{result.why}</p><div className="evidence"><small>{t.evidence}</small>{result.evidence.map((item) => <b key={item}>{item}</b>)}</div></div></section>
-    <section className="steer-section"><h2>{t.steer}</h2><div className="steer-actions">{t.steerOptions.map((option) => <button type="button" key={option.id} className={result.strategy === (option.id === "lessWalking" ? "rest" : option.id === "explore" ? "explore" : "flexible") ? "selected" : ""} onClick={() => onSteer(option.id)}>{option.label}</button>)}</div></section>
-    <button className="primary-action map-action" type="button" onClick={() => setMapsOpen(true)}><Icon name="map" />{t.mapAction}<Icon name="arrow" /></button><button className="text-action" type="button" onClick={onEdit}>{t.edit}</button>
-    {mapsOpen ? <div className="sheet-layer"><button className="sheet-backdrop" type="button" aria-label={t.mapClose} onClick={() => setMapsOpen(false)} /><section className="map-sheet" role="dialog" aria-modal="true" aria-labelledby="map-title"><div className="sheet-handle" /><h2 id="map-title">{t.mapTitle}</h2><p>{t.mapCopy}<strong>{result.mapQuery}</strong></p><div className="map-links">{mapLinks.map((link) => <a key={link.id} href={link.href} target="_blank" rel="noreferrer"><span>{link.label}</span><Icon name="arrow" /></a>)}</div><button className="text-action" type="button" onClick={() => setMapsOpen(false)}>{t.mapClose}</button></section></div> : null}
+    <section className="steer-section"><h2>{t.steer}</h2><div className="steer-actions">{t.steerOptions.map((option) => <button type="button" key={option.id} className={result.strategy === (option.id === "lessWalking" ? "rest" : option.id === "explore" ? "explore" : "flexible") ? "selected" : ""} onClick={() => onSteer(option.id)}>{option.label}</button>)}</div><form className="steer-input" onSubmit={submitSteer}><input value={steerText} onChange={(event) => setSteerText(event.target.value)} placeholder={t.steerPlaceholder} aria-label={t.steerPlaceholder} /><button type="submit" disabled={!steerText.trim()}>{t.steerSubmit}</button></form></section>
+    <button className="text-action" type="button" onClick={onEdit}>{t.edit}</button>
+    {mapAction ? <div className="sheet-layer"><button className="sheet-backdrop" type="button" aria-label={t.mapClose} onClick={() => setMapAction(null)} /><section className="map-sheet" role="dialog" aria-modal="true" aria-labelledby="map-title"><div className="sheet-handle" /><h2 id="map-title">{t.mapTitle}</h2><p>{t.mapCopy}<strong>{mapAction.query}</strong></p><div className="map-links">{mapLinks.map((link) => <a key={link.id} href={link.href} target="_blank" rel="noreferrer"><span>{link.label}</span><Icon name="arrow" /></a>)}</div><button className="text-action" type="button" onClick={() => setMapAction(null)}>{t.mapClose}</button></section></div> : null}
   </section>;
 }
 
