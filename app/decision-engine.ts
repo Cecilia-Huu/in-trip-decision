@@ -98,7 +98,7 @@ export function extractContextFromText(text: string, locale: Locale): ParsedCont
   else if (/(晚上|晚间)\s*(?:7|七)\s*点|(?:7|七)\s*点.*晚餐/i.test(normalized)) time = "19:00";
 
   let nextAnchor: ParsedContext["nextAnchor"];
-  if (time && /(晚餐|dinner)/i.test(normalized)) {
+  if (time && /(晚餐|吃饭|用餐|dinner)/i.test(normalized)) {
     if (/navigli/i.test(normalized)) nextAnchor = { time, place: locale === "zh" ? "Navigli 晚餐" : "Dinner in Navigli" };
     else nextAnchor = { time, place: locale === "zh" ? "晚餐" : "Dinner" };
   }
@@ -117,34 +117,54 @@ export const localDecisionEngine: DecisionEngine = (context, locale, steering) =
   const anchor = context.nextAnchor;
   const isZh = locale === "zh";
   const isSleep = sleepPattern.test(context.change) && !anchor && !steering;
+  const isLessWalking = state === "lessWalking";
   const currentArea = nearbyPhrase(context.currentPlace, locale);
   const anchorDestination = anchor ? cleanAnchorPlace(anchor.place) : "";
+  const navigationTarget = /^navigli$/i.test(anchorDestination) ? "Navigli, Milan" : anchorDestination;
 
   const title = isSleep
     ? isZh ? "先休息，醒来后再从附近开始。" : "Rest first, then restart nearby."
     : strategy === "rest"
-      ? isZh ? "先找个附近的地方休息一下。" : "Find somewhere nearby to rest first."
+      ? anchor
+        ? isLessWalking
+          ? isZh ? "不再跨区补景点，把活动收在附近。" : "Do not cross town for another sight. Keep things nearby."
+          : isZh ? "今天不再补大型景点，先休息一下。" : "Skip another major sight today and rest first."
+        : isLessWalking
+          ? isZh ? "不再扩大活动范围，先在附近休息。" : "Do not widen the area. Rest nearby first."
+          : isZh ? "先不追加新行程，休息一下。" : "Do not add another plan yet. Rest first."
       : strategy === "explore"
-        ? isZh ? "先在附近轻松逛一会儿。" : "Explore nearby for a little longer."
+        ? anchor
+          ? isZh ? "不补大型景点，只留一次轻量探索。" : "Skip a major sight and keep one light exploration."
+          : isZh ? "不排满后面的时间，只轻逛一段。" : "Leave the rest open and explore lightly for now."
         : strategy === "flexible"
-          ? isZh ? "先随性走一小段。" : "Keep the next move loose and flexible."
-          : isZh ? "先做一个轻量、随时能停的安排。" : "Choose one light, easy-to-end activity."
+          ? isZh ? "今天不再赶景点，换成一次室内停留。" : "Stop chasing sights and switch to an indoor pause."
+          : isZh ? "先不补原计划，只处理眼前一段。" : "Do not replace the failed plan yet. Handle this short window."
 
   const summary = isSleep
     ? isZh ? "睡一会儿，醒来后只安排附近的轻量活动。" : "Sleep for a while, then keep the next activity close by."
     : strategy === "rest"
-      ? isZh ? "休息 30–45 分钟，再继续后面的安排。" : "Rest for 30–45 minutes, then continue with what comes next."
+      ? anchor
+        ? isLessWalking
+          ? isZh ? "只在当前位置附近休息；接着直接前往下一站。" : "Rest only near your current location, then head directly to the next stop."
+          : isZh ? "休息约 30–45 分钟；恢复体力后，再把活动范围收向下一站。" : "Rest for 30–45 minutes, then keep any extra activity close to the next stop."
+        : isZh ? "休息约 30–45 分钟；恢复后只在附近做轻量活动。" : "Rest for 30–45 minutes, then keep any activity nearby and light."
       : strategy === "explore"
-        ? isZh ? "选一个低承诺的小体验，随时可以结束。" : "Pick one low-commitment experience you can leave anytime."
+        ? anchor
+          ? isZh ? `在当前位置附近轻逛，随时可以结束；接着前往 ${anchorDestination}。` : `Explore close to where you are, then head to ${anchorDestination}.`
+          : isZh ? "只选一个随时可以结束的小体验，90–120 分钟后再决定。" : "Choose one easy-to-end experience, then decide again in 90–120 minutes."
         : strategy === "flexible"
-          ? isZh ? "不预约，也不把后面的时间排满。" : "No booking, and no need to fill the rest of the time."
-          : isZh ? "不新增预约，也不做大范围移动。" : "Avoid new bookings and cross-town travel."
+          ? anchor
+            ? isZh ? `找一处无需预约的室内空间短暂停留，再前往 ${anchorDestination}。` : `Pause in an indoor place with no booking, then head to ${anchorDestination}.`
+            : isZh ? "找一处无需预约的室内空间，之后再决定下一步。" : "Choose an indoor place with no booking, then decide what comes next."
+          : isZh ? "不新增预约，也不跨区补一个替代景点。" : "Do not add a booking or cross town for a replacement sight."
 
   const localSearch = strategy === "rest"
-    ? isZh ? `可以坐下休息的咖啡馆 ${context.currentPlace}` : `cafes to sit and rest near ${context.currentPlace}`
+    ? isZh ? `可以坐下休息的地方 ${context.currentPlace}` : `places to sit and rest near ${context.currentPlace}`
     : strategy === "explore"
       ? isZh ? `适合短暂停留的小型景点 ${context.currentPlace}` : `small sights near ${context.currentPlace}`
-      : isZh ? `适合短暂停留的地方 ${context.currentPlace}` : `low commitment places near ${context.currentPlace}`;
+      : strategy === "flexible"
+        ? isZh ? `无需预约的室内文化空间 ${context.currentPlace}` : `indoor cultural places with no booking near ${context.currentPlace}`
+        : isZh ? `适合短暂停留的地方 ${context.currentPlace}` : `low commitment places near ${context.currentPlace}`;
 
   const steps: DecisionStep[] = [];
   if (isSleep) {
@@ -156,11 +176,16 @@ export const localDecisionEngine: DecisionEngine = (context, locale, steering) =
       : strategy === "explore"
         ? isZh ? "在附近选一个轻量体验" : "Choose one light activity nearby"
         : strategy === "flexible"
-          ? isZh ? "选一个随时能停的安排" : "Choose something you can leave anytime"
+          ? isZh ? "找一处无需预约的室内空间" : "Find an indoor place with no booking"
           : isZh ? "先找一个轻量落脚点" : "Find a light, low-risk place to pause";
-    steps.push({ label: isZh ? "现在" : "Now", title: stepTitle, detail: strategy === "rest" ? (isZh ? "30–45 分钟" : "30–45 minutes") : (isZh ? "不新增预约" : "No new booking"), map: { label: isZh ? "在地图里找附近的地方" : "Find a nearby place in Maps", query: localSearch, mode: "search" } });
+    const stepDetail = strategy === "rest"
+      ? isZh ? "30–45 分钟" : "30–45 minutes"
+      : strategy === "explore"
+        ? isZh ? "小范围 · 随时可结束" : "Small area · leave anytime"
+        : isZh ? "无需预约 · 随时可离开" : "No booking · leave anytime";
+    steps.push({ label: isZh ? "现在" : "Now", title: stepTitle, detail: stepDetail, map: { label: isZh ? "在地图里找附近的地方" : "Find a nearby place in Maps", query: localSearch, mode: "search" } });
     if (anchor) {
-      steps.push({ label: isZh ? "接着" : "Then", title: isZh ? `前往 ${anchorDestination}` : `Head to ${anchorDestination}`, detail: isZh ? "具体路线和到达时间交给地图" : "Let Maps handle the route and arrival time", map: { label: isZh ? `导航到 ${anchorDestination}` : `Navigate to ${anchorDestination}`, query: anchorDestination, mode: "navigate" } });
+      steps.push({ label: isZh ? "接着" : "Then", title: isZh ? `前往 ${anchorDestination}` : `Head to ${anchorDestination}`, detail: isZh ? "具体路线和到达时间交给地图" : "Let Maps handle the route and arrival time", map: { label: isZh ? `导航到 ${anchorDestination}` : `Navigate to ${anchorDestination}`, query: navigationTarget, mode: "navigate" } });
       steps.push({ label: isZh ? "固定安排" : "Fixed plan", title: `${anchor.time} ${anchor.place}`, detail: isZh ? "已保留 · 无需操作" : "Kept · no action needed", anchor: true });
     } else {
       steps.push({ label: isZh ? "90–120 分钟后" : "In 90–120 min", title: isZh ? "再回来决定下一步" : "Come back and decide again", detail: isZh ? "这一轮只处理眼前，不规划整天" : "This decision only covers what is immediately ahead" });
@@ -173,12 +198,16 @@ export const localDecisionEngine: DecisionEngine = (context, locale, steering) =
     ? isZh ? `你现在想休息，也没有固定安排，所以先睡一会儿；醒来后只从${currentArea}开始。` : `You want to rest and have no fixed plan, so sleep first and restart ${currentArea}.`
     : anchor
       ? strategy === "rest"
-        ? isZh ? `你现在${state === "tired" ? "有点累" : "不想走太远"}，${anchor.time} 还有「${anchor.place}」，所以先在${currentArea}休息，再前往下一站。` : `You want an easier pace and have “${anchor.place}” at ${anchor.time}, so rest ${currentArea} before heading there.`
+        ? isLessWalking
+          ? isZh ? `你不想走太远，${anchor.time} 还有「${anchor.place}」，所以这次不跨区补景点。先在${currentArea}休息，再直接前往下一站。` : `You want less walking and have “${anchor.place}” at ${anchor.time}, so do not cross town for another sight. Rest ${currentArea}, then head directly to the fixed plan.`
+          : isZh ? `你现在有点累，${anchor.time} 还有「${anchor.place}」，所以今天不再补大型景点。先在${currentArea}休息，再按原计划前往下一站。` : `You feel tired and have “${anchor.place}” at ${anchor.time}, so skip another major sight, rest ${currentArea}, and keep the fixed plan.`
         : strategy === "explore"
-          ? isZh ? `你还想继续逛，${anchor.time} 还有「${anchor.place}」，所以只在${currentArea}安排一个轻量体验，再前往下一站。` : `You still want to explore and have “${anchor.place}” at ${anchor.time}, so keep the extra stop light and local.`
-          : isZh ? `${anchor.time} 还有「${anchor.place}」，所以先在${currentArea}做一个随时能停的安排，再前往下一站。` : `You have “${anchor.place}” at ${anchor.time}, so choose something flexible ${currentArea} before heading there.`
+          ? isZh ? `你还想继续逛，${anchor.time} 还有「${anchor.place}」，所以放弃补大型景点，只在${currentArea}保留一次随时能结束的轻探索。` : `You still want to explore and have “${anchor.place}” at ${anchor.time}, so skip a major replacement and keep one light, easy-to-end activity ${currentArea}.`
+          : strategy === "flexible"
+            ? isZh ? `你想换个感觉，${anchor.time} 还有「${anchor.place}」，所以不再继续景点式行程，改成${currentArea}一次无需预约的室内停留。` : `You want a different feel and have “${anchor.place}” at ${anchor.time}, so switch from sightseeing to an unbooked indoor pause ${currentArea}.`
+            : isZh ? `${anchor.time} 还有「${anchor.place}」，所以不跨区补一个替代景点，只在${currentArea}留一个低承诺空档。` : `You have “${anchor.place}” at ${anchor.time}, so do not cross town for a replacement sight; keep one low-commitment pause ${currentArea}.`
       : strategy === "rest"
-        ? isZh ? `你现在${state === "tired" ? "有点累" : "不想走太远"}，也没有固定安排，所以先在${currentArea}休息，只处理接下来约 90–120 分钟。` : `You want an easier pace and have no fixed plan, so rest ${currentArea} and cover only the next 90–120 minutes.`
+        ? isZh ? `你现在${state === "tired" ? "有点累" : "不想走太远"}，也没有固定安排，所以不追加新行程，先在${currentArea}休息，只处理接下来约 90–120 分钟。` : `You want an easier pace and have no fixed plan, so add nothing new, rest ${currentArea}, and cover only the next 90–120 minutes.`
         : strategy === "explore"
           ? isZh ? `你还想继续逛，也没有固定安排，所以先在${currentArea}选一个轻量体验，90–120 分钟后再决定。` : `You still want to explore and have no fixed plan, so choose one light activity ${currentArea} and decide again later.`
           : strategy === "flexible"
