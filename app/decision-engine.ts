@@ -3,12 +3,16 @@ import type { Locale } from "./mock-data";
 export type CurrentState = "tired" | "lessWalking" | "explore" | "spontaneous";
 export type DecisionStrategy = "rest" | "explore" | "flexible" | "conservative";
 export type MapMode = "search" | "navigate";
+export type Coordinates = { latitude: number; longitude: number };
 
 export type DecisionContext = {
   change: string;
   currentPlace: string;
+  coordinates?: Coordinates;
+  noAnchorKnown?: boolean;
+  timeConstraint?: string;
   currentTime: string;
-  nextAnchor: { time: string; place: string } | null;
+  nextAnchor: { time: string; place: string; destination?: string } | null;
   currentState: CurrentState[];
   preferences: {
     travelMode?: "solo" | "withOthers";
@@ -21,7 +25,7 @@ export type DecisionStep = {
   title: string;
   detail: string;
   anchor?: boolean;
-  map?: { label: string; query: string; mode: MapMode };
+  map?: { label: string; query: string; mode: MapMode; center?: Coordinates };
 };
 
 export type DecisionResult = {
@@ -32,12 +36,6 @@ export type DecisionResult = {
   steps: DecisionStep[];
   why: string;
   evidence: string[];
-};
-
-export type ParsedContext = {
-  currentPlace?: string;
-  nextAnchor?: { time: string; place: string };
-  currentState?: CurrentState;
 };
 
 export type DecisionEngine = (context: DecisionContext, locale: Locale, steering?: CurrentState) => DecisionResult;
@@ -74,37 +72,6 @@ function nearbyPhrase(place: string, locale: Locale) {
   return place.includes("附近") ? place : `${place}附近`;
 }
 
-export function extractContextFromText(text: string, locale: Locale): ParsedContext {
-  const normalized = text.trim();
-  const lower = normalized.toLocaleLowerCase();
-  let currentPlace: string | undefined;
-  const knownPlaces = [
-    { aliases: ["米兰大教堂", "milan cathedral", "duomo di milano"], zh: "米兰大教堂", en: "Milan Cathedral" },
-    { aliases: ["塞维利亚大教堂", "seville cathedral", "catedral de sevilla"], zh: "塞维利亚大教堂", en: "Seville Cathedral" },
-    { aliases: ["圣家堂", "sagrada família", "sagrada familia"], zh: "圣家堂", en: "Sagrada Família" },
-  ];
-  const knownPlace = knownPlaces.find((place) => place.aliases.some((alias) => lower.includes(alias)));
-  if (knownPlace) currentPlace = knownPlace[locale];
-
-  let currentState: CurrentState | undefined;
-  if (/(有点累|累了|疲惫|困了|tired|exhausted)/i.test(normalized)) currentState = "tired";
-  else if (/(不想走太远|少走|走不动|less walking|not walk far)/i.test(normalized)) currentState = "lessWalking";
-  else if (/(还想.*逛|继续逛|继续探索|still want to explore|keep exploring)/i.test(normalized)) currentState = "explore";
-  else if (/(随性|随便走走|spontaneous|play it by ear)/i.test(normalized)) currentState = "spontaneous";
-
-  let time: string | undefined;
-  const digitalTime = normalized.match(/(?:^|\D)([01]?\d|2[0-3])[:：]([0-5]\d)(?:\D|$)/);
-  if (digitalTime) time = `${digitalTime[1].padStart(2, "0")}:${digitalTime[2]}`;
-  else if (/(晚上|晚间)\s*(?:7|七)\s*点|(?:7|七)\s*点.*晚餐/i.test(normalized)) time = "19:00";
-
-  let nextAnchor: ParsedContext["nextAnchor"];
-  if (time && /(晚餐|吃饭|用餐|dinner)/i.test(normalized)) {
-    if (/navigli/i.test(normalized)) nextAnchor = { time, place: locale === "zh" ? "Navigli 晚餐" : "Dinner in Navigli" };
-    else nextAnchor = { time, place: locale === "zh" ? "晚餐" : "Dinner" };
-  }
-  return { currentPlace, currentState, nextAnchor };
-}
-
 export function parseSteeringText(text: string): CurrentState {
   if (/(少走|不想走|累|休息|tired|less walk|rest)/i.test(text)) return "lessWalking";
   if (/(想逛|继续.*(?:逛|看)|再.*(?:逛|看)|探索|active|explore|keep going)/i.test(text)) return "explore";
@@ -118,8 +85,8 @@ export const localDecisionEngine: DecisionEngine = (context, locale, steering) =
   const isZh = locale === "zh";
   const isSleep = sleepPattern.test(context.change) && !anchor && !steering;
   const isLessWalking = state === "lessWalking";
-  const currentArea = nearbyPhrase(context.currentPlace, locale);
-  const anchorDestination = anchor ? cleanAnchorPlace(anchor.place) : "";
+  const currentArea = context.coordinates ? (isZh ? "当前位置附近" : "near your current location") : nearbyPhrase(context.currentPlace, locale);
+  const anchorDestination = anchor ? anchor.destination || cleanAnchorPlace(anchor.place) : "";
   const navigationTarget = /^navigli$/i.test(anchorDestination) ? "Navigli, Milan" : anchorDestination;
 
   const title = isSleep
@@ -166,6 +133,8 @@ export const localDecisionEngine: DecisionEngine = (context, locale, steering) =
         ? isZh ? `无需预约的室内文化空间 ${context.currentPlace}` : `indoor cultural places with no booking near ${context.currentPlace}`
         : isZh ? `适合短暂停留的地方 ${context.currentPlace}` : `low commitment places near ${context.currentPlace}`;
 
+  const category = strategy === "rest" ? "cafes" : strategy === "explore" ? "sights" : strategy === "flexible" ? "galleries" : "cafes";
+  const actionSearch = context.coordinates ? category : `${category} near ${context.currentPlace}`;
   const steps: DecisionStep[] = [];
   if (isSleep) {
     steps.push({ label: isZh ? "现在" : "Now", title: isZh ? "先休息 / 睡一会儿" : "Rest or sleep for a while", detail: isZh ? "不用急着为醒来后的时间做决定" : "No need to decide what happens after you wake up yet" });
@@ -192,7 +161,18 @@ export const localDecisionEngine: DecisionEngine = (context, locale, steering) =
     }
   }
 
-  const stateEvidence = stateLabel(state, locale);
+  for (const step of steps) {
+    if (step.map?.mode === "search") {
+      step.map.query = actionSearch;
+      step.map.center = context.coordinates;
+    }
+  }
+  // An event name alone is not a navigable address. Preserve it without inventing a venue.
+  if (anchor && !anchor.destination && /^(晚餐|火车|演出 \/ 预约|Dinner|Train|Show \/ booking)$/.test(anchor.place)) {
+    steps[1] = { label:isZh ? "接着" : "Then", title:isZh ? "核对预约里的地址，留出出发时间" : "Check the booking address and leave time to get there", detail:isZh ? "地点尚未提供，先不猜导航终点" : "No venue was supplied, so no destination is assumed" };
+  }
+  if (isSleep && !/酒店|hotel/i.test(context.currentPlace)) steps[1].title = isZh ? "醒来后从附近开始" : "Restart nearby when you wake up";
+  const stateEvidence = isSleep ? (isZh ? "想休息" : "Want to rest") : stateLabel(state, locale);
   const evidence = [stateEvidence, anchor ? `${anchor.time} ${anchor.place}` : null, context.currentPlace].filter((item): item is string => Boolean(item)).slice(0, 3);
   const why = isSleep
     ? isZh ? `你现在想休息，也没有固定安排，所以先睡一会儿；醒来后只从${currentArea}开始。` : `You want to rest and have no fixed plan, so sleep first and restart ${currentArea}.`
@@ -214,11 +194,21 @@ export const localDecisionEngine: DecisionEngine = (context, locale, steering) =
             ? isZh ? `你想随性一点，也没有固定安排，所以先在${currentArea}做一个随时能停的选择。` : `You want to keep things spontaneous and have no fixed plan, so choose something easy to leave ${currentArea}.`
             : isZh ? `目前没有固定安排，也没有更多状态信息，所以先在${currentArea}做一个低承诺选择。` : `There is no fixed plan or added state, so start with one low-commitment choice ${currentArea}.`;
 
-  return { strategy, title, summary, horizon: anchor ? (isZh ? `到 ${anchor.time} 之前` : `Until ${anchor.time}`) : (isZh ? "接下来约 90–120 分钟" : "The next 90–120 minutes"), steps, why, evidence };
+  const honestWhy = !anchor && !context.noAnchorKnown
+    ? why.replaceAll("也没有固定安排", "暂未提供固定安排").replace("目前没有固定安排", "暂未提供固定安排").replaceAll("have no fixed plan", "have not supplied a fixed plan").replace("There is no fixed plan", "No fixed plan was supplied")
+    : why;
+  return { strategy, title, summary, horizon: anchor ? (isZh ? `到 ${anchor.time} 之前` : `Until ${anchor.time}`) : (isZh ? "接下来约 90–120 分钟" : "The next 90–120 minutes"), steps, why:honestWhy, evidence };
 };
 
-export function createMapLinks(query: string, mode: MapMode = "search") {
+export function createMapLinks(query: string, mode: MapMode = "search", center?: Coordinates) {
   const encoded = encodeURIComponent(query);
+  if (center && mode === "search") {
+    const coordinate = `${center.latitude},${center.longitude}`;
+    return [
+      { id: "apple", label: "Apple Maps", href: `https://maps.apple.com/?q=${encoded}&sll=${encodeURIComponent(coordinate)}` },
+      { id: "google", label: "Google Maps", href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${query} near ${coordinate}`)}` },
+    ] as const;
+  }
   if (mode === "navigate") {
     return [
       { id: "apple", label: "Apple Maps", href: `https://maps.apple.com/?daddr=${encoded}&dirflg=w` },

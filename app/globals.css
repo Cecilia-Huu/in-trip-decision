@@ -148,3 +148,24 @@ input::placeholder,textarea::placeholder { color:#aaa; }
 @media (max-width:430px) { html,body { background:#fff; } .app-shell { width:100%; height:100dvh; min-height:600px; margin:0; border:0; border-radius:0; box-shadow:none; } }
 @media (max-width:370px) { .app-screen { padding-inline:16px; } .anchor-fields { grid-template-columns:98px minmax(0,1fr); } .steer-actions,.lens-modes { gap:5px; } .steer-actions button { font-size:12px; } .lens-modes button { font-size:9px; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+.progressive-form .form-section { margin-top:30px; }
+.progressive-form textarea { min-height:164px; }
+.progressive-form .chip-row { gap:6px; }
+.progressive-form .chip-row button { font-size:12px; padding-inline:10px; font-weight:500; }
+.input-recap { margin:24px 0; padding-bottom:20px; border-bottom:1px solid var(--border); color:var(--secondary); font-size:14px; line-height:1.65; overflow-wrap:anywhere; }
+.context-question h2 { font-size:22px; line-height:1.4; margin:0; letter-spacing:-.025em; }
+.context-question>p { font-size:14px; line-height:1.65; color:var(--secondary); margin:8px 0 20px; }
+.context-question input { width:100%; min-width:0; min-height:50px; border:1px solid #dcdcdc; border-radius:11px; padding:12px; font-size:16px; color:var(--text); background:#fff; }
+.manual-location>span { display:block; margin-bottom:8px; font-size:14px; }
+.secondary-action { width:100%; min-height:52px; border:1px solid var(--border); border-radius:12px; background:#fff; color:var(--text); cursor:pointer; font-size:15px; }
+.context-question .text-action { font-size:14px; }
+.edit-sentence { margin-top:24px; }
+.location-acquired { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:14px; }
+.location-acquired .text-action { margin:0; }
+.goose { width:88px; height:88px; object-fit:contain; }
+.processing-state { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; padding-bottom:90px; }
+.processing-state p,.location-fallback p { color:var(--secondary); font-size:14px; line-height:1.6; margin:0; }
+.location-fallback { text-align:center; padding:8px 0; }
+.thinking { animation:goose-think 2.8s ease-in-out infinite alternate; transform-origin:50% 88%; }
+@keyframes goose-think { from { transform:rotate(-3deg); } to { transform:rotate(3deg); } }
+@media (prefers-reduced-motion:reduce) { .thinking { animation:none!important; } }

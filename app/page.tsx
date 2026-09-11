@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { createMapLinks, extractContextFromText, localDecisionEngine, parseSteeringText, type CurrentState, type DecisionContext, type DecisionResult, type DecisionStep } from "./decision-engine";
+import { createMapLinks, localDecisionEngine, parseSteeringText, type CurrentState, type DecisionContext, type DecisionResult, type DecisionStep } from "./decision-engine";
+import { DecisionForm } from "./progressive-context";
 import { findLandmark, landmarks, type LandmarkId, type LandmarkNarrative, type Locale } from "./mock-data";
 
 type AppTab = "decision" | "lens";
@@ -86,55 +87,18 @@ function Header({ locale, showBack, onBack, onLocale }: { locale: Locale; showBa
   </header>;
 }
 
-function DecisionForm({ locale, initialContext, onDecide }: { locale: Locale; initialContext: DecisionContext | null; onDecide: (context: DecisionContext) => void }) {
-  const t = copy[locale];
-  const [change, setChange] = useState(initialContext?.change ?? "");
-  const [currentPlace, setCurrentPlace] = useState(initialContext?.currentPlace ?? "");
-  const [anchorTime, setAnchorTime] = useState(initialContext?.nextAnchor?.time ?? "");
-  const [anchorPlace, setAnchorPlace] = useState(initialContext?.nextAnchor?.place ?? "");
-  const [noAnchor, setNoAnchor] = useState(initialContext?.nextAnchor ? false : true);
-  const [anchorTouched, setAnchorTouched] = useState(Boolean(initialContext));
-  const [states, setStates] = useState<CurrentState[]>(initialContext?.currentState ?? []);
-  const [error, setError] = useState("");
-  const [clarifying, setClarifying] = useState(false);
-
-  const toggleState = (state: CurrentState) => setStates((current) => current.includes(state) ? [] : [state]);
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const trimmedChange = change.trim();
-    if (!trimmedChange) return setError(t.requiredChange);
-    const parsed = extractContextFromText(trimmedChange, locale);
-    const trimmedPlace = currentPlace.trim() || parsed.currentPlace || "";
-    if (!trimmedPlace) { setError(""); setClarifying(true); return; }
-    if (!noAnchor && Boolean(anchorTime.trim()) !== Boolean(anchorPlace.trim())) return setError(t.incompleteAnchor);
-    const parsedAnchor = !anchorTouched ? parsed.nextAnchor : undefined;
-    const nextAnchor = parsedAnchor ?? (!noAnchor && anchorTime.trim() && anchorPlace.trim() ? { time: anchorTime.trim(), place: anchorPlace.trim() } : null);
-    const currentState = states.length ? states : parsed.currentState ? [parsed.currentState] : [];
-    setError("");
-    onDecide({ change: trimmedChange, currentPlace: trimmedPlace, currentTime: new Date().toISOString(), nextAnchor, currentState, preferences: {} });
-  };
-
-  return <form className="decision-form app-screen" onSubmit={submit} noValidate>
-    <section className="hero-copy"><h1>{t.headline}</h1><p>{t.intro}</p></section>
-    <fieldset className="form-section"><legend>{t.changeLabel}</legend><textarea value={change} onChange={(event) => setChange(event.target.value)} placeholder={t.changePlaceholder} rows={3} /><div className="chip-row">{t.changeChips.map((chip) => <button type="button" key={chip} className={change === chip ? "selected" : ""} onClick={() => setChange(chip)}>{chip}</button>)}</div></fieldset>
-    <label className="form-section"><strong>{t.placeLabel}</strong><input value={currentPlace} onChange={(event) => setCurrentPlace(event.target.value)} placeholder={t.placePlaceholder} /></label>
-    <fieldset className="form-section anchor-section"><legend>{t.anchorLabel} <span>{t.anchorOptional}</span></legend>{noAnchor ? <div className="anchor-collapsed"><span><Icon name="check" />{t.anchorNone}</span><button type="button" onClick={() => { setNoAnchor(false); setAnchorTouched(true); }}>{`+ ${t.anchorAdd}`}</button></div> : <><div className="anchor-fields"><label><span>{t.anchorTime}</span><input inputMode="numeric" value={anchorTime} onChange={(event) => setAnchorTime(event.target.value)} placeholder={t.anchorTimePlaceholder} /></label><label><span>{t.anchorPlace}</span><input value={anchorPlace} onChange={(event) => setAnchorPlace(event.target.value)} placeholder={t.anchorPlacePlaceholder} /></label></div><button className="remove-anchor" type="button" onClick={() => { setNoAnchor(true); setAnchorTouched(true); setAnchorTime(""); setAnchorPlace(""); }}>{t.anchorRemove}</button></>}</fieldset>
-    <fieldset className="form-section"><legend>{t.stateLabel} <span>{t.stateOptional}</span></legend><div className="chip-row state-chips">{t.states.map((state) => <button type="button" key={state.id} className={states.includes(state.id) ? "selected" : ""} aria-pressed={states.includes(state.id)} onClick={() => toggleState(state.id)}>{state.label}</button>)}</div></fieldset>
-    {error ? <p className="form-error" role="alert">{error}</p> : null}<button className="primary-action" type="submit">{t.submit}<Icon name="arrow" /></button>
-    {clarifying ? <div className="clarifier-layer"><button className="sheet-backdrop" type="button" aria-label={t.mapClose} onClick={() => setClarifying(false)} /><section className="clarifier-sheet" role="dialog" aria-modal="true" aria-labelledby="clarifier-title"><div className="sheet-handle" /><p className="eyebrow">{t.clarify}</p><h2 id="clarifier-title">{t.placeLabel}</h2><p>{locale === "zh" ? "只补这一项，就可以继续。" : "Just this one detail, then we can continue."}</p><label><span>{t.placeLabel}</span><input value={currentPlace} onChange={(event) => setCurrentPlace(event.target.value)} placeholder={t.placePlaceholder} /></label><button className="primary-action" type="submit">{t.continue}<Icon name="arrow" /></button></section></div> : null}
-  </form>;
-}
 
 function DecisionView({ locale, context, result, onSteer, onEdit }: { locale: Locale; context: DecisionContext; result: DecisionResult; onSteer: (state: CurrentState) => void; onEdit: () => void }) {
   const t = copy[locale];
   const [mapAction, setMapAction] = useState<NonNullable<DecisionStep["map"]> | null>(null);
   const [preferredMap, setPreferredMap] = useState<MapProvider | null>(getInitialPreferredMap);
   const [steerText, setSteerText] = useState("");
-  const mapLinks = mapAction ? createMapLinks(mapAction.query, mapAction.mode) : [];
+  const mapLinks = mapAction ? createMapLinks(mapAction.query, mapAction.mode, mapAction.center) : [];
   const submitSteer = (event: FormEvent) => { event.preventDefault(); if (!steerText.trim()) return; onSteer(parseSteeringText(steerText)); };
   const openMap = (action: NonNullable<DecisionStep["map"]>) => {
     if (!preferredMap) return setMapAction(action);
-    const link = createMapLinks(action.query, action.mode).find((item) => item.id === preferredMap);
+    const link = createMapLinks(action.query, action.mode, action.center).find((item) => item.id === preferredMap);
+    if (!link) return setMapAction(action);
     if (link) window.open(link.href, "_blank", "noopener,noreferrer");
   };
   const rememberMap = (provider: MapProvider) => {
@@ -195,7 +159,7 @@ export default function Home() {
 
   const result = context ? localDecisionEngine(context, locale, steering ?? undefined) : null;
   const decide = (nextContext: DecisionContext) => { setContext(nextContext); setSteering(null); setDecisionScreen("result"); };
-  const steer = (state: CurrentState) => { if (context) setSteering(state); };
+  const steer = (state: CurrentState) => { if (context) setSteering(state === "spontaneous" && result?.strategy === "flexible" ? "explore" : state); };
   const lookup = (query: string) => { const match = findLandmark(query); setNarrative("short"); setSelectedLandmark(match?.id ?? null); setLensState(match ? "result" : "notFound"); };
   const resetLens = () => { setSelectedLandmark(null); setNarrative("short"); setLensState("idle"); };
   const showBack = activeTab === "decision" ? decisionScreen === "result" : lensState !== "idle";
