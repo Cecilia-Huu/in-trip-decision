@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createMapLinks, localDecisionEngine, parseSteeringText, readCurrentClock, type Steering, type DecisionContext, type DecisionResult, type DecisionStep } from "./decision-engine";
-import { GooseProcessing } from "./goose-state";
+import { Goose, GooseProcessing } from "./goose-state";
 import { DecisionForm } from "./progressive-context";
 import { findLandmark, landmarks, type LandmarkId, type LandmarkNarrative, type Locale } from "./mock-data";
 
@@ -12,6 +12,7 @@ type MapProvider = "apple" | "google" | "amap";
 
 const LANGUAGE_KEY = "in-trip-decision-locale";
 const MAP_KEY = "in-trip-decision-map";
+const MAP_LABELS: Record<MapProvider, string> = { apple: "Apple Maps", google: "Google Maps", amap: "高德地图" };
 
 const copy = {
   zh: {
@@ -25,9 +26,9 @@ const copy = {
     stateLabel: "现在呢？", stateOptional: "可以不选",
     states: [{ id: "tired" as const, label: "有点累" }, { id: "lessWalking" as const, label: "不想走太远" }, { id: "explore" as const, label: "还想继续逛" }, { id: "spontaneous" as const, label: "想随性一点" }],
     submit: "决定下一步", continue: "继续", requiredChange: "先告诉我发生了什么。", requiredPlace: "还需要一个大概位置。", incompleteAnchor: "固定安排的时间和名称需要一起填写。", clarify: "还差一个信息",
-    resultEyebrow: "Decision", why: "为什么这样建议？", evidence: "依据", steer: "想调整一下？",
+    suggestion: "为你建议", now: "现在", timeBasis: "基于你当前的时间", why: "为什么这样安排？", steer: "想改一下？", adjustLoading: "我再帮你想想。",
     steerOptions: [{ id: "lessWalking" as const, label: "少走一点" }, { id: "explore" as const, label: "我还想逛" }, { id: "spontaneous" as const, label: "换个感觉" }],
-    steerPlaceholder: "或者告诉我你想怎么改……", steerSubmit: "重新调整 →", mapTitle: "在地图中打开", mapCopy: "选择一次，下次会直接打开：", mapClose: "关闭", changeMap: "换地图", edit: "修改刚才的信息",
+    steerPlaceholder: "比如：我其实还想逛，但不想走太远……", steerSubmit: "重新调整", mapTitle: "在地图中打开", mapCopy: "选择一次，下次会直接打开：", mapClose: "关闭", changeMap: "换地图", edit: "修改刚才的信息",
     lensTitle: "识景 Beta", lensIntro: "输入眼前的景点名称，先听刚好够用的那一段。", lensLimit: "Beta 当前支持有限地点", lensLabel: "景点名称", lensPlaceholder: "例如：米兰大教堂", lensSubmit: "讲给我听", lensTry: "当前支持",
     lookingAt: "你正在看", oneThing: "先知道这一件事就够了", lookUp: "抬头找找 👀",
     modes: [{ id: "short" as const, label: "30 秒讲完" }, { id: "story" as const, label: "讲个有意思的故事" }, { id: "detail" as const, label: "详细一点" }],
@@ -45,9 +46,9 @@ const copy = {
     stateLabel: "How are you now?", stateOptional: "Optional",
     states: [{ id: "tired" as const, label: "A little tired" }, { id: "lessWalking" as const, label: "Less walking" }, { id: "explore" as const, label: "Still want to explore" }, { id: "spontaneous" as const, label: "Keep it spontaneous" }],
     submit: "Decide what’s next", continue: "Continue", requiredChange: "Tell me what changed first.", requiredPlace: "Add your rough location.", incompleteAnchor: "Add both the time and name of the fixed plan.", clarify: "One detail missing",
-    resultEyebrow: "Decision", why: "Why this suggestion?", evidence: "Based on", steer: "Adjust this?",
+    suggestion: "For you", now: "Now", timeBasis: "Based on your current time", why: "Why this plan?", steer: "Want to adjust it?", adjustLoading: "Let me rethink that.",
     steerOptions: [{ id: "lessWalking" as const, label: "Less walking" }, { id: "explore" as const, label: "I want to explore" }, { id: "spontaneous" as const, label: "Change the feel" }],
-    steerPlaceholder: "Or tell me how you’d change it…", steerSubmit: "Readjust →", mapTitle: "Open in Maps", mapCopy: "Choose once; next time it opens directly:", mapClose: "Close", changeMap: "Change map", edit: "Edit context",
+    steerPlaceholder: "For example: I still want to explore, but not walk far…", steerSubmit: "Readjust", mapTitle: "Open in Maps", mapCopy: "Choose once; next time it opens directly:", mapClose: "Close", changeMap: "Change map", edit: "Edit context",
     lensTitle: "Lens Beta", lensIntro: "Enter the landmark in front of you for an explanation that is just long enough.", lensLimit: "Beta currently supports a limited set of places", lensLabel: "Landmark name", lensPlaceholder: "For example: Milan Cathedral", lensSubmit: "Tell me about it", lensTry: "Currently supported",
     lookingAt: "You’re looking at", oneThing: "One thing worth knowing", lookUp: "Look up 👀",
     modes: [{ id: "short" as const, label: "30-second version" }, { id: "story" as const, label: "Tell me a story" }, { id: "detail" as const, label: "A little more detail" }],
@@ -88,6 +89,46 @@ function Header({ locale, showBack, onBack, onLocale }: { locale: Locale; showBa
   </header>;
 }
 
+function resultPresentation(result: DecisionResult, context: DecisionContext, locale: Locale) {
+  const zh = locale === "zh";
+  const timeNeedsChecking = /不超过一小时|已过|不能确定|At most an hour|clock is past|does not establish/i.test(result.summary);
+  if (timeNeedsChecking) return {
+    title: result.title,
+    summary: result.summary,
+    goose: zh ? "先核对一下时间和路线。" : "Check the time and route first.",
+  };
+  const sleeping = /睡|sleep/i.test(result.title);
+  if (sleeping) return {
+    title: zh ? "先睡一会儿，醒来再决定。" : "Rest first. Decide when you wake.",
+    summary: zh ? "这一段先不塞进新安排，醒来再看状态。" : "Leave this part of the day open and check in after you wake.",
+    goose: zh ? "先歇一下，一会儿再出发吧。" : "Rest first. You can head out later.",
+  };
+  if (result.strategy === "explore") return {
+    title: context.lessWalking || /不想走远|少走|stay close/i.test(result.why) ? (zh ? "就在附近，轻轻逛一段。" : "Keep it close and explore lightly.") : (zh ? "先轻逛一段，再看下一步。" : "Explore lightly, then see what’s next."),
+    summary: zh ? "不跨区，也不追加新的大型景点。" : "Stay in this area and skip another major sight.",
+    goose: zh ? "不着急，我们就近走走。" : "No rush. Keep it nearby.",
+  };
+  if (result.strategy === "flexible") return {
+    title: zh ? "换到室内，慢下来。" : "Move indoors and slow down.",
+    summary: zh ? "先放下景点清单，给这一段换个节奏。" : "Put the sightseeing list aside and change the pace.",
+    goose: zh ? "换个节奏，也很好。" : "A change of pace works too.",
+  };
+  return {
+    title: context.nextAnchor ? (zh ? "先坐一会儿，再去下一站。" : "Sit for a while, then head to the next stop.") : (zh ? "先坐一会儿，再轻逛。" : "Sit for a while, then wander nearby."),
+    summary: zh ? "今天不再补大型景点，把这一段过得轻一点。" : "Skip another major sight and keep this part of the day light.",
+    goose: zh ? "先休息一下，一会儿再出发吧。" : "Take a breather. You can head out soon.",
+  };
+}
+
+function stepIcon(step: DecisionStep) {
+  if (step.anchor) return "🔒";
+  const value = `${step.category ?? ""} ${step.map?.query ?? ""}`;
+  if (/咖啡|面包|café|bak|cafe/i.test(value)) return "☕";
+  if (/室内|商场|indoor|mall/i.test(value)) return "🏬";
+  if (/公园|街区|小店|park|street|shop/i.test(value)) return "🌳";
+  return "•";
+}
+
 
 function DecisionView({ locale, context, result, onSteer, onEdit }: { locale: Locale; context: DecisionContext; result: DecisionResult; onSteer: (state: Steering) => void; onEdit: () => void }) {
   const t = copy[locale];
@@ -98,6 +139,9 @@ function DecisionView({ locale, context, result, onSteer, onEdit }: { locale: Lo
   const [steerError, setSteerError] = useState("");
   const screen = useRef<HTMLElement>(null);
   const mapLinks = mapAction ? createMapLinks(mapAction.query, mapAction.mode, mapAction.center) : [];
+  const presentation = resultPresentation(result, context, locale);
+  const visibleEvidence = result.evidence.filter((item) => item !== context.currentPlace && item !== "已获取当前位置" && item !== "Current location received").slice(0, 3);
+  if (result.strategy === "conservative" && visibleEvidence.length < 3) visibleEvidence.push(locale === "zh" ? "降低移动成本 · 推测" : "Lower movement cost · inferred");
   const submitSteer = (event: FormEvent) => {
     event.preventDefault();
     const parsed = parseSteeringText(steerText);
@@ -115,13 +159,14 @@ function DecisionView({ locale, context, result, onSteer, onEdit }: { locale: Lo
     try { window.localStorage.setItem(MAP_KEY, provider); } catch { /* Preference persistence is optional. */ }
   };
   return <section ref={screen} className="decision-result app-screen" aria-live="polite" aria-busy={Boolean(pending)}>
-    <div className="result-heading"><div><p className="eyebrow">{t.resultEyebrow}</p><h1>{result.title}</h1></div>{context.nextAnchor ? <span className="anchor-badge"><Icon name="lock" />{context.nextAnchor.time}</span> : null}</div>
-    <p className="result-summary">{result.summary}</p><p className="horizon">{result.horizon}</p>
-    <ol className="strategy-timeline">{result.steps.map((step, index) => <li key={`${result.strategy}-${index}`} className={step.anchor ? "anchor" : index === 0 ? "current" : ""}><span className="timeline-dot">{step.anchor ? <Icon name="lock" /> : null}</span><div><small>{step.label}</small><strong>{step.title}</strong><p>{step.detail}</p>{step.map ? <div className="step-map-row"><button className="step-map-action" type="button" onClick={() => openMap(step.map!)}>{step.map.label}<Icon name="arrow" /></button>{preferredMap ? <button className="change-map-action" type="button" onClick={() => setMapAction(step.map!)}>{t.changeMap}</button> : null}</div> : null}</div></li>)}</ol>{result.revisit ? <p className="revisit-note">{result.revisit}</p> : null}
-    <section className="why-card"><span><Icon name="spark" /></span><div><h2>{t.why}</h2><p>{result.why}</p><div className="evidence"><small>{t.evidence}</small>{result.evidence.map((item) => <b key={item}>{item}</b>)}</div></div></section>
-    <section className="steer-section"><h2>{t.steer}</h2><div className="steer-actions">{t.steerOptions.map((option) => <button type="button" key={option.id} className={steerText === option.label ? "selected" : ""} onClick={() => { setSteerText(option.label); setSteerError(""); }}>{option.label}</button>)}</div><form className="steer-input" onSubmit={submitSteer}><textarea rows={2} value={steerText} onChange={(event) => { setSteerText(event.target.value); setSteerError(""); }} placeholder={t.steerPlaceholder} aria-label={t.steerPlaceholder} /><button type="submit" disabled={!steerText.trim()}>{t.steerSubmit}</button></form>{steerError ? <p className="form-error" role="alert">{steerError}</p> : null}</section>
+    <div className="result-goose"><Goose resting /><p>{presentation.goose}</p></div>
+    <section className="result-decision"><p>{t.suggestion}</p><div className="result-heading"><h1>{presentation.title}</h1>{context.nextAnchor ? <span className="anchor-badge"><Icon name="lock" />{context.nextAnchor.time}</span> : null}</div><p className="result-summary">{presentation.summary}</p></section>
+    <p className="current-time"><span aria-hidden="true">◷</span><strong>{t.now} {result.currentLocalTime}</strong><small>{t.timeBasis}</small></p>
+    <div className="time-blocks">{result.steps.map((step, index) => <article key={`${result.strategy}-${index}`} className={step.anchor ? "time-block fixed-anchor" : "time-block"}><small>{step.label}</small><div className="time-block-title"><span aria-hidden="true">{stepIcon(step)}</span><strong>{step.title}</strong></div><p>{step.detail}</p>{step.map ? <div className="step-map-row"><button className="step-map-action" type="button" onClick={() => openMap(step.map!)}><span aria-hidden="true">⌖</span>{step.map.label}<Icon name="arrow" /></button>{preferredMap ? <small className="map-preference">{MAP_LABELS[preferredMap]} · <button className="change-map-action" type="button" onClick={() => setMapAction(step.map!)}>{t.changeMap}</button></small> : null}</div> : null}</article>)}</div>{result.revisit ? <p className="revisit-note">{result.revisit}</p> : null}
+    <section className="why-section"><h2><span aria-hidden="true">💡</span>{t.why}</h2><p>{result.why}</p>{visibleEvidence.length ? <div className="evidence">{visibleEvidence.map((item) => <b key={item}>{item}</b>)}</div> : null}</section>
+    <section className="steer-section"><h2><span aria-hidden="true">✎</span>{t.steer}</h2><form className="steer-input" onSubmit={submitSteer}><textarea rows={2} value={steerText} onChange={(event) => { setSteerText(event.target.value); setSteerError(""); }} placeholder={t.steerPlaceholder} aria-label={t.steerPlaceholder} /><button type="submit" disabled={!steerText.trim()} aria-label={t.steerSubmit}><Icon name="arrow" /></button></form><div className="steer-actions">{t.steerOptions.map((option) => <button type="button" key={option.id} className={steerText === option.label ? "selected" : ""} onClick={() => { setSteerText(option.label); setSteerError(""); }}>{option.label}</button>)}</div>{steerError ? <p className="form-error" role="alert">{steerError}</p> : null}</section>
     <button className="text-action" type="button" onClick={onEdit}>{t.edit}</button>
-    {pending ? <div className="adjust-processing"><GooseProcessing locale={locale} onComplete={() => { onSteer(pending); setPending(null); screen.current?.scrollTo({top:0}); }} /></div> : null}
+    {pending ? <div className="adjust-processing"><GooseProcessing locale={locale} message={t.adjustLoading} onComplete={() => { onSteer(pending); setPending(null); screen.current?.scrollTo({top:0}); }} /></div> : null}
     {mapAction ? <div className="sheet-layer"><button className="sheet-backdrop" type="button" aria-label={t.mapClose} onClick={() => setMapAction(null)} /><section className="map-sheet" role="dialog" aria-modal="true" aria-labelledby="map-title"><div className="sheet-handle" /><h2 id="map-title">{t.mapTitle}</h2><p>{t.mapCopy}<strong>{mapAction.query}</strong></p><div className="map-links">{mapLinks.map((link) => <a key={link.id} href={link.href} target="_blank" rel="noreferrer" onClick={() => { rememberMap(link.id); setMapAction(null); }}><span>{link.label}</span><Icon name="arrow" /></a>)}</div><button className="text-action" type="button" onClick={() => setMapAction(null)}>{t.mapClose}</button></section></div> : null}
   </section>;
 }

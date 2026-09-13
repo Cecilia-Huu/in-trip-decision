@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 100" fill="none">
+  <title>In-trip Decision — resting goose</title>
+  <g stroke="#252525" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 74c-5-10 0-20 11-23l11 5-2-24c-1-13 8-22 20-22 13 0 21 9 20 20-1 8-7 12-11 18-2 3 0 7 5 10 13 7 22 14 20 23-14 7-58 8-74-7Z" fill="#fff"/>
+    <path d="M83 28c8-1 16 2 19 7-5 6-13 7-21 3Z" fill="#F3B84F"/>
+    <path d="M42 76c12 5 32 5 45 0"/>
+    <path d="M102 67h21l-3 22h-18Z" fill="#FFF4F7"/>
+    <path d="M123 71c10-1 10 12 0 12"/>
+  </g>
+  <circle cx="72" cy="26" r="2.5" fill="#252525"/>
+  <ellipse cx="68" cy="38" rx="5" ry="3" fill="#F7DCE4"/>
+  <path d="M108 58c-4-5 4-7 0-12m9 12c-4-5 4-7 0-12" stroke="#E98FA6" stroke-width="3" stroke-linecap="round"/>
+</svg>
