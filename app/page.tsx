@@ -90,35 +90,20 @@ function Header({ locale, showBack, onBack, onLocale }: { locale: Locale; showBa
   </header>;
 }
 
-function resultPresentation(result: DecisionResult, context: DecisionContext, locale: Locale) {
+function resultPresentation(result: DecisionResult, locale: Locale) {
   const zh = locale === "zh";
-  const timeNeedsChecking = /不超过一小时|已过|不能确定|At most an hour|clock is past|does not establish/i.test(result.summary);
-  if (timeNeedsChecking) return {
-    title: result.title,
-    summary: result.summary,
-    goose: zh ? "先核对一下时间和路线。" : "Check the time and route first.",
-  };
-  const sleeping = /睡|sleep/i.test(result.title);
-  if (sleeping) return {
-    title: zh ? "先睡一会儿，醒来再决定。" : "Rest first. Decide when you wake.",
-    summary: zh ? "这一段先不塞进新安排，醒来再看状态。" : "Leave this part of the day open and check in after you wake.",
-    goose: zh ? "先歇一下，一会儿再出发吧。" : "Rest first. You can head out later.",
-  };
-  if (result.strategy === "explore") return {
-    title: context.lessWalking || /不想走远|少走|stay close/i.test(result.why) ? (zh ? "就在附近，轻轻逛一段。" : "Keep it close and explore lightly.") : (zh ? "先轻逛一段，再看下一步。" : "Explore lightly, then see what’s next."),
-    summary: zh ? "不跨区，也不追加新的大型景点。" : "Stay in this area and skip another major sight.",
-    goose: zh ? "不着急，我们就近走走。" : "No rush. Keep it nearby.",
-  };
-  if (result.strategy === "flexible") return {
-    title: zh ? "换到室内，慢下来。" : "Move indoors and slow down.",
-    summary: zh ? "先放下景点清单，给这一段换个节奏。" : "Put the sightseeing list aside and change the pace.",
-    goose: zh ? "换个节奏，也很好。" : "A change of pace works too.",
-  };
-  return {
-    title: context.nextAnchor ? (zh ? "先坐一会儿，再去下一站。" : "Sit for a while, then head to the next stop.") : (zh ? "先坐一会儿，再轻逛。" : "Sit for a while, then wander nearby."),
-    summary: zh ? "今天不再补大型景点，把这一段过得轻一点。" : "Skip another major sight and keep this part of the day light.",
-    goose: zh ? "先休息一下，一会儿再出发吧。" : "Take a breather. You can head out soon.",
-  };
+  const goose = result.strategy === "END_DAY"
+    ? (zh ? "今天已经够啦，回去歇着吧。" : "That is enough for today. Time to rest.")
+    : result.strategy === "MOVE_TO_ANCHOR" || result.strategy === "SHORT_WAIT"
+      ? (zh ? "先把该赶上的安排赶上。" : "First, make the plan that matters.")
+      : result.strategy === "LIGHT_EXPLORE"
+        ? (zh ? "还想走走，那就别走太远。" : "If you want to keep going, keep it close.")
+        : result.strategy === "INDOOR_LOW_COMMITMENT"
+          ? (zh ? "换到室内，也能把这段接上。" : "Moving indoors can still connect this part of the day.")
+          : result.strategy === "FOOD_DRINK_BREAK" && /夜间|深夜|night/i.test(result.evidence.join(" "))
+            ? (zh ? "晚一点，就别把行程塞太满。" : "Late hours call for a lighter plan.")
+            : (zh ? "先缓一缓，后面才走得舒服。" : "Pause first so the next part feels easier.");
+  return { title: result.title, summary: result.summary, goose };
 }
 
 function stepIcon(step: DecisionStep) {
@@ -140,9 +125,9 @@ function DecisionView({ locale, context, result, onSteer, onEdit }: { locale: Lo
   const [steerError, setSteerError] = useState("");
   const screen = useRef<HTMLElement>(null);
   const mapLinks = mapAction ? createMapLinks(mapAction.query, mapAction.mode, mapAction.center) : [];
-  const presentation = resultPresentation(result, context, locale);
+  const presentation = resultPresentation(result, locale);
   const visibleEvidence = result.evidence.filter((item) => item !== context.currentPlace && item !== "已获取当前位置" && item !== "Current location received").slice(0, 3);
-  if (result.strategy === "conservative" && visibleEvidence.length < 3) visibleEvidence.push(locale === "zh" ? "降低移动成本 · 推测" : "Lower movement cost · inferred");
+  if (context.currentState.length === 0 && visibleEvidence.length < 3) visibleEvidence.push(locale === "zh" ? "优先可随时结束 · 推测" : "Easy to end · inferred");
   const submitSteer = (event: FormEvent) => {
     event.preventDefault();
     const parsed = parseSteeringText(steerText);
@@ -217,7 +202,7 @@ export default function Home() {
   const decide = (nextContext: DecisionContext) => { setContext(nextContext); setSteering(null); setDecisionScreen("result"); };
   const steer = (state: Steering) => {
     if (!context) return;
-    const intent = state.intent === "spontaneous" && !state.indoors && result?.strategy === "flexible" ? "explore" : state.intent;
+    const intent = state.intent === "spontaneous" && !state.indoors && result?.strategy === "INDOOR_LOW_COMMITMENT" ? "explore" : state.intent;
     setContext({ ...context, ...readCurrentClock() });
     setSteering({ ...state, intent });
   };
