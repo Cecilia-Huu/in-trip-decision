@@ -191,7 +191,14 @@ function resultCopy(strategy: StrategyId, context: DecisionModelContext, locale:
   if (strategy === "END_DAY") return { title: t("今天就到这里，回住处休息。", "Call it a day and return to your stay."), summary: t("不再硬塞第二个安排，明天再继续。", "Do not force in another activity; continue tomorrow.") };
   if (strategy === "FOOD_DRINK_BREAK" && (context.daypart === "NIGHT" || context.daypart === "LATE_NIGHT")) return { title: t("今晚不用再补行程了。", "You do not need to add another plan tonight."), summary: t("想再待一会儿，就只留一个附近、随时能结束的选择。", "If you want to stay out, keep just one nearby option that is easy to end.") };
   if (strategy === "REST_NEARBY") return { title: nearAnchor ? t("先短暂坐一会儿，再去下一站。", "Sit briefly, then head to the next stop.") : t("先恢复体力，再决定要不要继续。", "Recover first, then decide whether to continue."), summary: t("今天不再补大型景点，先降低体力和移动负担。", "Skip another major sight and reduce effort and movement first.") };
-  if (strategy === "LIGHT_EXPLORE") return { title: context.movementTolerance === "LOW" ? t("不跨区，就在附近轻轻逛。", "Stay local and explore lightly.") : t("趁状态还好，就近轻逛一段。", "Use the energy you have for a light nearby exploration."), summary: t("只选低承诺、随时可以结束的体验。", "Choose only a low-commitment experience that is easy to end.") };
+  if (strategy === "LIGHT_EXPLORE") return {
+    title: context.movementTolerance === "LOW"
+      ? t("不跨区，就在附近轻轻逛。", "Stay local and explore lightly.")
+      : context.energy === "LOW"
+        ? t("保留一点探索，但把范围留在附近。", "Keep some exploration, but keep it nearby.")
+        : t("趁状态还好，就近轻逛一段。", "Use the energy you have for a light nearby exploration."),
+    summary: t("只选低承诺、随时可以结束的体验。", "Choose only a low-commitment experience that is easy to end."),
+  };
   return { title: t("先转到室内，保留随时结束的余量。", "Move indoors and keep an easy exit."), summary: t("不增加预约，也不为了补景点跨区移动。", "Add no booking and do not cross town to replace a sight.") };
 }
 

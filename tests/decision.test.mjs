@@ -178,6 +178,7 @@ test('CASE A: 10:00 extra time and high energy selects LIGHT_EXPLORE', () => {
 test('CASE B: 15:00 low energy plus explicit explore keeps a reversible LIGHT_EXPLORE compromise', () => {
   const result=localDecisionEngine(engineContext('15:00','博物馆关了，我走麻了，但我还想继续逛',{states:['explore']}),'zh');
   assert.equal(result.strategy,'LIGHT_EXPLORE');
+  assert.match(result.title,/保留一点探索/);
   assert.match(result.why,/体力已经偏低|放弃跨区/);
   assert.doesNotMatch(result.title,/回住处/);
 });
