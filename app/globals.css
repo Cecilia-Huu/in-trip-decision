@@ -162,7 +162,12 @@ input::placeholder,textarea::placeholder { color:#aaa; }
 .edit-sentence { margin-top:24px; }
 .location-acquired { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:14px; }
 .location-acquired .text-action { margin:0; }
-.goose { width:88px; height:88px; object-fit:contain; }
+.goose { width:96px; height:96px; object-fit:contain; }
+.adjust-processing { position:absolute; inset:62px 0 calc(66px + var(--safe-bottom)); z-index:15; display:flex; background:var(--bg); }
+.revisit-note { color:var(--secondary); font-size:13px; line-height:1.6; margin:0 0 20px; }
+.steer-input { display:flex; flex-direction:column; }
+.steer-input textarea { width:100%; min-height:82px; resize:vertical; padding:12px; border:1px solid #dcdcdc; border-radius:11px; background:white; color:var(--text); font-size:16px; line-height:1.5; }
+.steer-input button { background:var(--pink); color:white; min-height:48px; }
 .processing-state { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; padding-bottom:90px; }
 .processing-state p,.location-fallback p { color:var(--secondary); font-size:14px; line-height:1.6; margin:0; }
 .location-fallback { text-align:center; padding:8px 0; }

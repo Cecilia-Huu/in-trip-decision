@@ -3,15 +3,13 @@ import { extractContextFromText, needsAnchorQuestion, type ParsedContext } from 
 import type { Coordinates, DecisionContext } from "./decision-engine";
 import type { Locale } from "./mock-data";
 import { requestCoordinates } from "./location";
+import { readCurrentClock } from "./decision-engine";
+import { Goose, GooseProcessing } from "./goose-state";
 
 const words = {
   zh: { title:"旅途决策", intro:"说说现在的情况。", label:"发生什么了？", placeholder:"比如：博物馆今天没开，我已经走得好累了。", chips:["原计划去不了了","突然多出时间","今天不想赶了"], submit:"看看下一步 →", missing:"先说说发生了什么。", location:"现在从哪里开始？", locationHint:"知道你大概在哪，我才能判断这一段怎么接。", locate:"📍 使用当前位置", locating:"正在获取位置…", manual:"手动输入位置", failed:"没找到你的位置。", fallback:"手动告诉我你在哪 →", acquired:"✓ 已获取当前位置", edit:"修改", place:"例如：米兰大教堂附近", continue:"继续 →", anchor:"接下来有必须赶到的安排吗？", anchorHint:"比如预约的晚餐、演出、车次。没有也完全没关系。", none:"没有固定安排", add:"＋ 添加安排", time:"时间", plan:"安排 / 地点", invalid:"请填写有效时间和安排名称。", back:"修改刚才那句话", loading:"我看看怎么把这一段接上。" },
   en: { title:"Travel decision", intro:"Tell me what’s happening.", label:"What happened?", placeholder:"For example: The museum is closed and I’m worn out from walking.", chips:["The plan fell through","Time opened up","No more rushing today"], submit:"See what’s next →", missing:"Tell me what happened first.", location:"Where are you starting from?", locationHint:"A rough location helps connect this part of your day.", locate:"📍 Use current location", locating:"Getting your location…", manual:"Enter a location", failed:"Couldn’t find your location.", fallback:"Tell me where you are →", acquired:"✓ Current location received", edit:"Change", place:"For example: near Milan Cathedral", continue:"Continue →", anchor:"Anything you need to get to next?", anchorHint:"A dinner booking, a show, a train. No fixed plan is fine too.", none:"No fixed plan", add:"＋ Add a plan", time:"Time", plan:"Plan / place", invalid:"Add a valid time and the plan name.", back:"Edit what you said", loading:"Let’s connect this part of your day." },
 } as const;
-
-function Goose({ thinking = false }: { thinking?: boolean }) {
-  return <img className={`goose${thinking ? " thinking" : ""}`} src={`${import.meta.env.BASE_URL}assets/goose-thinking.svg`} alt="" width="88" height="88" />;
-}
 
 type Stage = "input" | "location" | "anchor" | "processing";
 type GeoState = "idle" | "pending" | "success" | "error";
@@ -35,16 +33,8 @@ export function DecisionForm({ locale, initialContext, onDecide }: { locale: Loc
   useEffect(() => () => { requestId.current += 1; }, []);
   useEffect(() => { if (stage !== "input") question.current?.focus(); }, [stage]);
 
-  // Allow a paint before the local calculation. No simulated network delay or minimum wait.
-  useEffect(() => {
-    if (stage !== "processing" || !ready) return;
-    let second = 0;
-    const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => onDecide(ready)); });
-    return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
-  }, [stage, ready, onDecide]);
-
   const finish = (data: ParsedContext, location: string, coords?: Coordinates) => {
-    setReady({ change:change.trim(), currentPlace:location, coordinates:coords, currentTime:new Date().toISOString(), timeConstraint:data.timeConstraint, nextAnchor:data.nextAnchor ?? null, noAnchorKnown:data.noAnchor, currentState:data.currentState ? [data.currentState] : [], preferences:initialContext?.preferences ?? {} });
+    setReady({ change:change.trim(), currentPlace:location, coordinates:coords, ...readCurrentClock(), lessWalking:data.lessWalking, indoors:data.indoors, timeConstraint:data.timeConstraint, nextAnchor:data.nextAnchor ?? null, noAnchorKnown:data.noAnchor, currentState:data.currentState ? [data.currentState] : [], preferences:initialContext?.preferences ?? {} });
     setStage("processing");
   };
   const advance = (data: ParsedContext, location: string, coords?: Coordinates) => {
@@ -87,7 +77,7 @@ export function DecisionForm({ locale, initialContext, onDecide }: { locale: Loc
     }).catch(() => { if (id === requestId.current) setGeoState("error"); });
   };
   const enterManually = () => { requestId.current += 1; setManual(true); setCoordinates(undefined); setGeoState("idle"); };
-  if (stage === "processing") return <section className="app-screen processing-state" role="status"><Goose thinking /><p>{t.loading}</p></section>;
+  if (stage === "processing" && ready) return <GooseProcessing locale={locale} onComplete={() => onDecide(ready)} />;
 
   return <form className="decision-form progressive-form app-screen" onSubmit={submit} noValidate>
     <section className="hero-copy"><h1>{t.title}</h1><p>{t.intro}</p></section>

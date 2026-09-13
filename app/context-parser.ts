@@ -6,6 +6,9 @@ export type ParsedContext = {
   nextAnchor?: { time: string; place: string; destination?: string };
   currentState?: CurrentState;
   noAnchor: boolean;
+  lessWalking?: boolean;
+  indoors?: boolean;
+  restAtHotel?: boolean;
   timeConstraint?: string;
 };
 
@@ -15,7 +18,7 @@ export function extractContextFromText(text: string, locale: Locale): ParsedCont
   const clauses = text.trim().split(/[，。！？,!?;；\n]/).map(s => s.trim()).filter(Boolean);
   const noAnchor = /没有(?:固定|后面|接下来|其他|后续|必须赶到)?(?:的)?安排|没有预约|无固定安排|no (?:fixed )?plans?|nothing (?:planned|booked)/i.test(text);
   let currentState: CurrentState | undefined;
-  if (/(好累|有点累|累了|疲惫|腿.*走断|困了|睡懒觉|想睡|补觉|tired|exhausted|worn out|sleep in|nap)/i.test(text)) currentState = "tired";
+  if (/(好累|很累|有点累|累了|疲惫|腿.*走断|困了|睡懒觉|想睡|睡一觉|补觉|tired|exhausted|worn out|sleep in|nap)/i.test(text)) currentState = "tired";
   else if (/(不想.*(?:走|坐车)|少走|走不动|不想赶|less walking|not walk far|no more rushing)/i.test(text)) currentState = "lessWalking";
   else if (/(还想.*逛|继续逛|继续探索|回酒店.*(?:亏|可惜)|still want to explore|keep exploring)/i.test(text)) currentState = "explore";
   else if (/(随性|随便走走|spontaneous|play it by ear)/i.test(text)) currentState = "spontaneous";
@@ -50,11 +53,15 @@ export function extractContextFromText(text: string, locale: Locale): ParsedCont
     currentPlace = place?.[0];
   }
   const nowClause = clauses.find(c => /(?:现在|now)/i.test(c) && timeOf(c));
-  return { currentPlace, currentState, nextAnchor, noAnchor, timeConstraint: nowClause ? timeOf(nowClause) : undefined };
+  const lessWalking = /(少走|不想走|不要走|别走|不走远|不想.*坐车|less walk|not.*walk far|stay close)/i.test(text);
+  const indoors = /(下雨|室内|raining|indoors)/i.test(text) && !/(没有下雨|没下雨|not raining)/i.test(text);
+  if (/(还想.*(?:逛|玩)|继续逛|want to explore)/i.test(text) && !/(不想.*(?:逛|玩))/.test(text)) currentState = "explore";
+  const restAtHotel = /酒店|hotel/i.test(currentPlace ?? "") && /(睡懒觉|睡一(?:觉|会)|补觉|想睡|sleep|nap)/i.test(text);
+  return { currentPlace, currentState, nextAnchor, noAnchor, lessWalking, indoors, restAtHotel, timeConstraint: nowClause ? timeOf(nowClause) : undefined };
 }
 
 export function needsAnchorQuestion(parsed: ParsedContext) {
   // A 30–45 minute rest or an extra activity can conflict with a booking.
   // Otherwise a conservative fallback is enough; don't turn this into a questionnaire.
-  return !parsed.nextAnchor && !parsed.noAnchor && Boolean(parsed.currentState);
+  return !parsed.nextAnchor && !parsed.noAnchor && !parsed.restAtHotel && Boolean(parsed.currentState);
 }
