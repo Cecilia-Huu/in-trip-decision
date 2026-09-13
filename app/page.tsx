@@ -3,6 +3,7 @@ import { createMapLinks, localDecisionEngine, parseSteeringText, readCurrentCloc
 import { Goose, GooseProcessing } from "./goose-state";
 import { DecisionForm } from "./progressive-context";
 import { findLandmark, landmarks, type LandmarkId, type LandmarkNarrative, type Locale } from "./mock-data";
+import { VoiceInput } from "./voice-input";
 
 type AppTab = "decision" | "lens";
 type DecisionScreen = "form" | "result";
@@ -16,7 +17,7 @@ const MAP_LABELS: Record<MapProvider, string> = { apple: "Apple Maps", google: "
 
 const copy = {
   zh: {
-    appName: "In-trip Decision", language: "切换语言", back: "返回", navLabel: "主导航",
+    appName: "Goose On", language: "切换语言", back: "返回", navLabel: "主导航",
     nav: [{ id: "decision" as const, label: "下一步" }, { id: "lens" as const, label: "识景 Beta" }],
     headline: "旅途决策", intro: "说说现在的情况。",
     changeLabel: "发生什么了？", changePlaceholder: "比如：博物馆关了。",
@@ -33,10 +34,10 @@ const copy = {
     lookingAt: "你正在看", oneThing: "先知道这一件事就够了", lookUp: "抬头找找 👀",
     modes: [{ id: "short" as const, label: "30 秒讲完" }, { id: "story" as const, label: "讲个有意思的故事" }, { id: "detail" as const, label: "详细一点" }],
     another: "换一个景点", notFound: "这个地点目前还没有收录", notFoundCopy: "Beta 当前支持米兰大教堂、塞维利亚大教堂和圣家堂。",
-    pageTitle: "In-trip Decision · 旅途决策", pageDescription: "旅行正在进行时，只决定接下来 1–3 小时怎么过。",
+    pageTitle: "Goose On · In-trip Decision", pageDescription: "旅行正在进行时，只决定接下来 1–3 小时怎么过。",
   },
   en: {
-    appName: "In-trip Decision", language: "Switch language", back: "Back", navLabel: "Main navigation",
+    appName: "Goose On", language: "Switch language", back: "Back", navLabel: "Main navigation",
     nav: [{ id: "decision" as const, label: "Next move" }, { id: "lens" as const, label: "Lens Beta" }],
     headline: "Trip decision", intro: "Tell me what is happening now.",
     changeLabel: "What changed?", changePlaceholder: "For example: The museum is closed.",
@@ -53,7 +54,7 @@ const copy = {
     lookingAt: "You’re looking at", oneThing: "One thing worth knowing", lookUp: "Look up 👀",
     modes: [{ id: "short" as const, label: "30-second version" }, { id: "story" as const, label: "Tell me a story" }, { id: "detail" as const, label: "A little more detail" }],
     another: "Try another place", notFound: "This place is not included yet", notFoundCopy: "The Beta currently supports Milan Cathedral, Seville Cathedral, and Sagrada Família.",
-    pageTitle: "In-trip Decision · What’s next?", pageDescription: "When travel changes, decide only how to spend the next one to three hours.",
+    pageTitle: "Goose On · In-trip Decision", pageDescription: "When travel changes, decide only how to spend the next one to three hours.",
   },
 } as const;
 
@@ -84,7 +85,7 @@ function Header({ locale, showBack, onBack, onLocale }: { locale: Locale; showBa
   const t = copy[locale];
   return <header className="product-header">
     {showBack ? <button className="back-button" type="button" onClick={onBack} aria-label={t.back}>←</button> : <span className="header-spacer" />}
-    <strong>{t.appName}</strong>
+    <strong><img src={import.meta.env.BASE_URL + "assets/goose-logo.svg"} alt="" width="30" height="30" /><span>{t.appName}</span></strong>
     <div className="language-toggle" role="group" aria-label={t.language}><button type="button" className={locale === "zh" ? "active" : ""} onClick={() => onLocale("zh")} aria-pressed={locale === "zh"}>中</button><span>|</span><button type="button" className={locale === "en" ? "active" : ""} onClick={() => onLocale("en")} aria-pressed={locale === "en"}>EN</button></div>
   </header>;
 }
@@ -164,7 +165,7 @@ function DecisionView({ locale, context, result, onSteer, onEdit }: { locale: Lo
     <p className="current-time"><span aria-hidden="true">◷</span><strong>{t.now} {result.currentLocalTime}</strong><small>{t.timeBasis}</small></p>
     <div className="time-blocks">{result.steps.map((step, index) => <article key={`${result.strategy}-${index}`} className={step.anchor ? "time-block fixed-anchor" : "time-block"}><small>{step.label}</small><div className="time-block-title"><span aria-hidden="true">{stepIcon(step)}</span><strong>{step.title}</strong></div><p>{step.detail}</p>{step.map ? <div className="step-map-row"><button className="step-map-action" type="button" onClick={() => openMap(step.map!)}><span aria-hidden="true">⌖</span>{step.map.label}<Icon name="arrow" /></button>{preferredMap ? <small className="map-preference">{MAP_LABELS[preferredMap]} · <button className="change-map-action" type="button" onClick={() => setMapAction(step.map!)}>{t.changeMap}</button></small> : null}</div> : null}</article>)}</div>{result.revisit ? <p className="revisit-note">{result.revisit}</p> : null}
     <section className="why-section"><h2><span aria-hidden="true">💡</span>{t.why}</h2><p>{result.why}</p>{visibleEvidence.length ? <div className="evidence">{visibleEvidence.map((item) => <b key={item}>{item}</b>)}</div> : null}</section>
-    <section className="steer-section"><h2><span aria-hidden="true">✎</span>{t.steer}</h2><form className="steer-input" onSubmit={submitSteer}><textarea rows={2} value={steerText} onChange={(event) => { setSteerText(event.target.value); setSteerError(""); }} placeholder={t.steerPlaceholder} aria-label={t.steerPlaceholder} /><button type="submit" disabled={!steerText.trim()} aria-label={t.steerSubmit}><Icon name="arrow" /></button></form><div className="steer-actions">{t.steerOptions.map((option) => <button type="button" key={option.id} className={steerText === option.label ? "selected" : ""} onClick={() => { setSteerText(option.label); setSteerError(""); }}>{option.label}</button>)}</div>{steerError ? <p className="form-error" role="alert">{steerError}</p> : null}</section>
+    <section className="steer-section"><h2><span aria-hidden="true">✎</span>{t.steer}</h2><form className="steer-input" onSubmit={submitSteer}><VoiceInput compact locale={locale} value={steerText} onChange={(value) => { setSteerText(value); setSteerError(""); }} placeholder={t.steerPlaceholder} ariaLabel={t.steerPlaceholder} /><button className="steer-submit" type="submit" disabled={!steerText.trim()} aria-label={t.steerSubmit}><Icon name="arrow" /></button></form><div className="steer-actions">{t.steerOptions.map((option) => <button type="button" key={option.id} className={steerText === option.label ? "selected" : ""} onClick={() => { setSteerText(option.label); setSteerError(""); }}>{option.label}</button>)}</div>{steerError ? <p className="form-error" role="alert">{steerError}</p> : null}</section>
     <button className="text-action" type="button" onClick={onEdit}>{t.edit}</button>
     {pending ? <div className="adjust-processing"><GooseProcessing locale={locale} message={t.adjustLoading} onComplete={() => { onSteer(pending); setPending(null); screen.current?.scrollTo({top:0}); }} /></div> : null}
     {mapAction ? <div className="sheet-layer"><button className="sheet-backdrop" type="button" aria-label={t.mapClose} onClick={() => setMapAction(null)} /><section className="map-sheet" role="dialog" aria-modal="true" aria-labelledby="map-title"><div className="sheet-handle" /><h2 id="map-title">{t.mapTitle}</h2><p>{t.mapCopy}<strong>{mapAction.query}</strong></p><div className="map-links">{mapLinks.map((link) => <a key={link.id} href={link.href} target="_blank" rel="noreferrer" onClick={() => { rememberMap(link.id); setMapAction(null); }}><span>{link.label}</span><Icon name="arrow" /></a>)}</div><button className="text-action" type="button" onClick={() => setMapAction(null)}>{t.mapClose}</button></section></div> : null}

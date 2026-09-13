@@ -4,6 +4,7 @@ import { extractContextFromText, needsAnchorQuestion } from '../app/context-pars
 import { localDecisionEngine, createMapLinks, readCurrentClock, parseSteeringText } from '../app/decision-engine.ts';
 import { findLandmark, landmarks } from '../app/mock-data.ts';
 import { requestCoordinates } from '../app/location.ts';
+import { appendTranscript, getSpeechRecognitionConstructor, speechLanguage } from '../app/speech.ts';
 
 const full = '我在米兰大教堂附近，博物馆今天没开，我已经走得好累了，晚上七点在 Navigli 吃饭。';
 const context = (text = full) => {
@@ -152,6 +153,20 @@ test('Location success preserves coordinates only and requests low-cost position
   assert.equal(calls,0);
   assert.deepEqual(await requestCoordinates(geo),{latitude:45.4642,longitude:9.19});
   assert.equal(calls,1);
+});
+test('Voice support is feature-detected and unsupported browsers stay text-only', () => {
+  class StandardRecognition {}
+  class WebkitRecognition {}
+  assert.equal(getSpeechRecognitionConstructor(undefined), null);
+  assert.equal(getSpeechRecognitionConstructor({ SpeechRecognition:StandardRecognition }), StandardRecognition);
+  assert.equal(getSpeechRecognitionConstructor({ webkitSpeechRecognition:WebkitRecognition }), WebkitRecognition);
+  assert.equal(speechLanguage('zh'), 'zh-CN');
+  assert.equal(speechLanguage('en'), 'en-US');
+});
+test('Final voice text appends naturally without submitting or replacing typed text', () => {
+  assert.equal(appendTranscript('', '博物馆没开', 'zh'), '博物馆没开');
+  assert.equal(appendTranscript('博物馆没开', '我走得有点累', 'zh'), '博物馆没开，我走得有点累');
+  assert.equal(appendTranscript('The museum is closed.', 'I feel tired', 'en'), 'The museum is closed. I feel tired');
 });
 test('Lens aliases, unknown fallback and all three depths are retained', () => {
   for(const [name,id] of [['米兰大教堂','milanCathedral'],[' Milan Cathedral ','milanCathedral'],['Duomo di Milano','milanCathedral'],['塞维利亚大教堂','sevilleCathedral'],['圣家堂','sagradaFamilia']]) assert.equal(findLandmark(name)?.id,id);

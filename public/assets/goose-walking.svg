@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" fill="none">
+  <title>Goose On — walking goose</title>
+  <style>
+    .walker{animation:bob 2.4s ease-in-out infinite;transform-origin:center}.leg-a{animation:step-a 1.2s ease-in-out infinite;transform-origin:111px 122px}.leg-b{animation:step-b 1.2s ease-in-out infinite;transform-origin:142px 122px}.bag{animation:bag 2.4s ease-in-out infinite;transform-origin:88px 80px}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}@keyframes step-a{0%,100%{transform:rotate(6deg)}50%{transform:rotate(-9deg)}}@keyframes step-b{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(7deg)}}@keyframes bag{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(3deg)}}@media(prefers-reduced-motion:reduce){.walker,.leg-a,.leg-b,.bag{animation:none}}
+  </style>
+  <path d="M18 126c30 3 54 2 78 0m70 0c23 1 41 0 58-3" stroke="#E8E2E1" stroke-width="3" stroke-linecap="round"/>
+  <path d="M22 42c8-7 16-7 24 0m150 9c7-6 14-6 21 0" stroke="#F2E7EA" stroke-width="3" stroke-linecap="round"/>
+  <g class="walker">
+    <g class="leg-a" stroke="#252525" stroke-width="6" stroke-linecap="round"><path d="M111 116v19"/><path d="M111 135l-11 4"/></g>
+    <g class="leg-b" stroke="#252525" stroke-width="6" stroke-linecap="round"><path d="M142 116v18"/><path d="M142 134l12 3"/></g>
+    <g class="bag" stroke="#252525" stroke-width="5" stroke-linejoin="round"><path d="M67 57c-8 4-13 13-13 27v22h42V75c0-10-7-18-17-19Z" fill="#EFB0BF"/><path d="M65 59c5 6 10 8 17 8"/><path d="M62 88h27v12H62Z" fill="#F8DDE4"/></g>
+    <g stroke="#252525" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M74 106c-11-14-5-30 11-36l14 7-2-32c-2-19 9-32 26-32 17 0 29 12 27 28-1 11-10 17-16 25-4 5-2 11 6 16 20 12 20 27 6 36-17 10-55 7-72-12Z" fill="#fff"/>
+      <path d="M141 39c11-2 21 2 25 8-6 7-17 9-27 5Z" fill="#F3A842"/>
+      <path d="M97 96c10 9 23 10 32 2"/>
+    </g>
+    <circle cx="127" cy="34" r="3" fill="#252525"/>
+    <circle cx="140" cy="32" r="2.5" fill="#252525"/>
+    <ellipse cx="122" cy="49" rx="6" ry="3.5" fill="#F7DCE4"/>
+  </g>
+</svg>
