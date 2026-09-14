@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { extractContextFromText, needsAnchorQuestion } from '../app/context-parser.ts';
 import { localDecisionEngine, createMapLinks, readCurrentClock, parseSteeringText } from '../app/decision-engine.ts';
 import { findLandmark, landmarks } from '../app/mock-data.ts';
-import { requestCoordinates } from '../app/location.ts';
+import { requestCoordinates, resolveDecisionLocation } from '../app/location.ts';
 import { appendTranscript, getSpeechRecognitionConstructor, speechLanguage } from '../app/speech.ts';
 import { buildDecisionContext, getDaypart } from '../app/decision-model.ts';
 import { applyVetoRules, decisionHorizon, selectPrimaryStrategy } from '../app/decision-rules.ts';
@@ -274,6 +274,11 @@ test('Location success preserves coordinates only and requests low-cost position
   assert.equal(calls,0);
   assert.deepEqual(await requestCoordinates(geo),{latitude:45.4642,longitude:9.19});
   assert.equal(calls,1);
+});
+test('Visible location input is the readable decision location while genuine coordinates stay available', () => {
+  const coords={latitude:45.4642,longitude:9.19};
+  assert.deepEqual(resolveDecisionLocation('',coords),{currentPlace:'',coordinates:coords});
+  assert.deepEqual(resolveDecisionLocation('  Brera, Milan  ',coords),{currentPlace:'Brera, Milan',coordinates:coords});
 });
 test('Voice support is feature-detected and unsupported browsers stay text-only', () => {
   class StandardRecognition {}

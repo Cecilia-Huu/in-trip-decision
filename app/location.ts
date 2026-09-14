@@ -1,5 +1,9 @@
 import type { Coordinates } from "./decision-engine";
 
+export function resolveDecisionLocation(input: string, coordinates?: Coordinates) {
+  return { currentPlace: input.trim(), coordinates };
+}
+
 // Called by the location button only; no permission request on mount or import.
 export function requestCoordinates(geolocation: Geolocation | undefined): Promise<Coordinates> {
   return new Promise((resolve, reject) => {

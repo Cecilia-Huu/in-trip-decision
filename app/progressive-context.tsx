@@ -2,14 +2,14 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { extractContextFromText, needsAnchorQuestion, type ParsedContext } from "./context-parser";
 import type { Coordinates, DecisionContext } from "./decision-engine";
 import type { Locale } from "./mock-data";
-import { requestCoordinates } from "./location";
+import { requestCoordinates, resolveDecisionLocation } from "./location";
 import { readCurrentClock } from "./decision-engine";
-import { Goose, GooseProcessing } from "./goose-state";
+import { GooseProcessing } from "./goose-state";
 import { VoiceInput } from "./voice-input";
 
 const words = {
-  zh: { hero:"告诉我，现在怎么啦？", label:"发生什么了？", try:"试试这样说", placeholder:"比如：博物馆没开，我已经走得有点累了……", chips:["原计划去不了了","突然多出时间","今天不想赶了"], submit:"看看下一步 →", missing:"先说说发生了什么。", location:"现在从哪里开始？", locationHint:"知道你大概在哪，我才能判断这一段怎么接。", locate:"📍 使用当前位置", locating:"正在获取位置…", manual:"手动输入位置", failed:"没找到你的位置。", fallback:"手动告诉我你在哪 →", acquired:"✓ 已获取当前位置", edit:"修改", place:"例如：米兰大教堂附近", continue:"继续 →", anchor:"接下来有必须赶到的安排吗？", anchorHint:"比如预约的晚餐、演出、车次。没有也完全没关系。", none:"没有固定安排", add:"＋ 添加安排", time:"时间", plan:"安排 / 地点", invalid:"请填写有效时间和安排名称。", back:"修改刚才那句话" },
-  en: { hero:"Tell me—what’s going on?", label:"What happened?", try:"Try saying", placeholder:"For example: The museum is closed and I’m getting tired…", chips:["The plan fell through","Time opened up","No more rushing today"], submit:"See what’s next →", missing:"Tell me what happened first.", location:"Where are you starting from?", locationHint:"A rough location helps connect this part of your day.", locate:"📍 Use current location", locating:"Getting your location…", manual:"Enter a location", failed:"Couldn’t find your location.", fallback:"Tell me where you are →", acquired:"✓ Current location received", edit:"Change", place:"For example: near Milan Cathedral", continue:"Continue →", anchor:"Anything you need to get to next?", anchorHint:"A dinner booking, a show, a train. No fixed plan is fine too.", none:"No fixed plan", add:"＋ Add a plan", time:"Time", plan:"Plan / place", invalid:"Add a valid time and the plan name.", back:"Edit what you said" },
+  zh: { hero:"告诉我，现在怎么啦？", label:"发生什么了？", try:"试试这样说", placeholder:"比如：博物馆没开，我已经走得有点累了……", chips:["原计划去不了了","突然多出时间","今天不想赶了"], submit:"看看下一步 →", missing:"先说说发生了什么。", location:"现在从哪里开始？", locationHint:"大概位置就可以。", locate:"📍 使用当前位置", locating:"正在获取位置…", or:"或", locationLabel:"位置", place:"输入附近的地点、地标或地址……", failed:"没找到你的位置。", acquired:"✓ 已获取当前位置", acquiredHint:"位置已获取，你也可以补充一个附近地点。", continue:"继续 →", anchor:"接下来有必须赶到的安排吗？", anchorHint:"比如预约的晚餐、演出、车次。没有也完全没关系。", none:"没有固定安排", add:"＋ 添加安排", time:"时间", plan:"安排 / 地点", invalid:"请填写有效时间和安排名称。", back:"修改刚才的情况" },
+  en: { hero:"Tell me—what’s going on?", label:"What happened?", try:"Try saying", placeholder:"For example: The museum is closed and I’m getting tired…", chips:["The plan fell through","Time opened up","No more rushing today"], submit:"See what’s next →", missing:"Tell me what happened first.", location:"Where are you starting from?", locationHint:"A rough area is enough.", locate:"📍 Use current location", locating:"Getting your location…", or:"or", locationLabel:"Location", place:"Search or enter a place, landmark or address…", failed:"Couldn’t find your location.", acquired:"✓ Current location detected", acquiredHint:"Location detected. You can also add a nearby place.", continue:"Continue →", anchor:"Anything you need to get to next?", anchorHint:"A dinner booking, a show, a train. No fixed plan is fine too.", none:"No fixed plan", add:"＋ Add a plan", time:"Time", plan:"Plan / place", invalid:"Add a valid time and the plan name.", back:"Edit what you said" },
 } as const;
 
 type Stage = "input" | "location" | "anchor" | "processing";
@@ -23,7 +23,6 @@ export function DecisionForm({ locale, initialContext, onDecide }: { locale: Loc
   const [place, setPlace] = useState("");
   const [coordinates, setCoordinates] = useState<Coordinates>();
   const [geoState, setGeoState] = useState<GeoState>("idle");
-  const [manual, setManual] = useState(false);
   const [addAnchor, setAddAnchor] = useState(false);
   const [anchorTime, setAnchorTime] = useState("");
   const [anchorPlace, setAnchorPlace] = useState("");
@@ -35,7 +34,8 @@ export function DecisionForm({ locale, initialContext, onDecide }: { locale: Loc
   useEffect(() => { if (stage !== "input") question.current?.focus(); }, [stage]);
 
   const finish = (data: ParsedContext, location: string, coords?: Coordinates) => {
-    setReady({ change:change.trim(), currentPlace:location, coordinates:coords, ...readCurrentClock(), lessWalking:data.lessWalking, indoors:data.indoors, timeConstraint:data.timeConstraint, nextAnchor:data.nextAnchor ?? null, noAnchorKnown:data.noAnchor, currentState:data.currentState ? [data.currentState] : [], preferences:initialContext?.preferences ?? {} });
+    const resolvedLocation = resolveDecisionLocation(location, coords);
+    setReady({ change:change.trim(), ...resolvedLocation, ...readCurrentClock(), lessWalking:data.lessWalking, indoors:data.indoors, timeConstraint:data.timeConstraint, nextAnchor:data.nextAnchor ?? null, noAnchorKnown:data.noAnchor, currentState:data.currentState ? [data.currentState] : [], preferences:initialContext?.preferences ?? {} });
     setStage("processing");
   };
   const advance = (data: ParsedContext, location: string, coords?: Coordinates) => {
@@ -49,7 +49,7 @@ export function DecisionForm({ locale, initialContext, onDecide }: { locale: Loc
     if (stage === "input") {
       if (!change.trim()) { setError(t.missing); return; }
       const data = extractContextFromText(change, locale);
-      setManual(false); setAddAnchor(false); setAnchorTime(""); setAnchorPlace("");
+      setAddAnchor(false); setAnchorTime(""); setAnchorPlace("");
       // Carry manually supplied context only when the sentence itself is unchanged.
       const same = initialContext?.change === change.trim();
       const location = data.currentPlace || (same ? initialContext.currentPlace : "");
@@ -70,14 +70,13 @@ export function DecisionForm({ locale, initialContext, onDecide }: { locale: Loc
   };
   const locate = () => {
     const id = ++requestId.current;
-    setCoordinates(undefined); setGeoState("pending"); setManual(false);
+    setCoordinates(undefined); setGeoState("pending");
     requestCoordinates(navigator.geolocation).then(position => {
       if (id !== requestId.current) return;
       setCoordinates(position);
-      setPlace(""); setGeoState("success");
+      setGeoState("success");
     }).catch(() => { if (id === requestId.current) setGeoState("error"); });
   };
-  const enterManually = () => { requestId.current += 1; setManual(true); setCoordinates(undefined); setGeoState("idle"); };
   if (stage === "processing" && ready) return <GooseProcessing locale={locale} onComplete={() => onDecide(ready)} />;
 
   return <form className={`decision-form progressive-form app-screen${stage === "input" ? " home-screen" : ""}`} onSubmit={submit} noValidate>
@@ -85,11 +84,15 @@ export function DecisionForm({ locale, initialContext, onDecide }: { locale: Loc
       <p className="input-recap">{change}</p>
       <section className="context-question" aria-labelledby="context-question">
         <h2 id="context-question" ref={question} tabIndex={-1}>{stage === "location" ? t.location : t.anchor}</h2>
-        <p>{stage === "location" ? t.locationHint : t.anchorHint}</p>
+        {stage === "anchor" ? <p>{t.anchorHint}</p> : null}
         {stage === "location" ? <>
-          {geoState === "error" ? <div className="location-fallback" role="status"><Goose /><p>{t.failed}</p><button className="text-action" type="button" onClick={enterManually}>{t.fallback}</button></div> : geoState === "success" ? <div className="location-acquired" role="status"><span>{t.acquired}</span><button className="text-action" type="button" onClick={enterManually}>{t.edit}</button></div> : !manual ? <><button className="primary-action" type="button" disabled={geoState === "pending"} onClick={locate}>{geoState === "pending" ? t.locating : t.locate}</button><button className="text-action" type="button" onClick={enterManually}>{t.manual}</button></> : null}
-          {manual ? <label className="manual-location"><span>{t.manual}</span><input autoComplete="off" value={place} onChange={e => setPlace(e.target.value)} placeholder={t.place} /></label> : null}
-          {manual || coordinates ? <button className="primary-action" type="submit" disabled={!place.trim() && !coordinates}>{t.continue}</button> : null}
+          <div className={`location-goose${geoState === "error" ? " is-confused" : ""}`} aria-hidden="true"><img src={import.meta.env.BASE_URL + `assets/${geoState === "error" ? "goose-confused" : "goose-location"}.svg`} alt="" width="148" height="116" /></div>
+          <button className="primary-action location-use-current" type="button" disabled={geoState === "pending"} onClick={locate}>{geoState === "pending" ? t.locating : t.locate}</button>
+          {geoState === "success" ? <div className="location-status is-success" role="status"><strong>{t.acquired}</strong><small>{t.acquiredHint}</small></div> : null}
+          {geoState === "error" ? <div className="location-status is-error" role="status"><strong>{t.failed}</strong></div> : null}
+          <div className="location-divider" aria-hidden="true"><span>{t.or}</span></div>
+          <label className="manual-location"><span>{t.locationLabel}</span><span className="location-input"><b aria-hidden="true">⌖</b><input autoComplete="off" value={place} onChange={e => setPlace(e.target.value)} placeholder={t.place} /></span><small>{t.locationHint}</small></label>
+          <button className="primary-action location-continue" type="submit" disabled={!place.trim() && !coordinates}>{t.continue}</button>
         </> : <><button className="secondary-action" type="button" onClick={() => finish({ ...parsed, noAnchor:true }, place, coordinates)}>{t.none}</button>{!addAnchor ? <button className="text-action" type="button" onClick={() => setAddAnchor(true)}>{t.add}</button> : <><div className="anchor-fields"><label><span>{t.time}</span><input type="text" inputMode="numeric" placeholder="19:00" value={anchorTime} onChange={e => setAnchorTime(e.target.value)} /></label><label><span>{t.plan}</span><input value={anchorPlace} onChange={e => setAnchorPlace(e.target.value)} placeholder="Navigli" /></label></div><button className="primary-action" type="submit">{t.continue}</button></>}</>}
       </section><button className="text-action edit-sentence" type="button" onClick={() => { requestId.current += 1; setStage("input"); setError(""); }}>{t.back}</button>
     </>}
